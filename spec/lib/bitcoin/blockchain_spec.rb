@@ -40,7 +40,6 @@ describe Bitcoin::Blockchain do
     end
 
     let(:server) { 'http://user:password@127.0.0.1:18332' }
-    let(:endpoint) { '127.0.0.1:18332' }
     let(:blockchain) do
       Bitcoin::Blockchain.new.tap {|b| b.configure(server: server)}
     end
@@ -48,7 +47,7 @@ describe Bitcoin::Blockchain do
     it 'returns latest block number' do
       block_number = 1489174
 
-      stub_request(:post, endpoint)
+      stub_request(:post, 'http://127.0.0.1:18332')
         .with(body: { jsonrpc: '1.0',
                       method: :getblockcount,
                       params:  [] }.to_json)
@@ -60,7 +59,7 @@ describe Bitcoin::Blockchain do
     end
 
     it 'raises error if there is error in response body' do
-      stub_request(:post, endpoint)
+      stub_request(:post, 'http://127.0.0.1:18332')
         .with(body: { jsonrpc: '1.0',
                       method: :getblockcount,
                       params:  [] }.to_json)
@@ -69,17 +68,6 @@ describe Bitcoin::Blockchain do
                            id:     nil }.to_json)
 
       expect{ blockchain.latest_block_number }.to raise_error(Peatio::Blockchain::ClientError)
-    end
-      
-    it 'keeps alive' do
-      stub_request(:post, endpoint)
-          .to_return(body: { result: 1489174,
-                             error:  nil,
-                             id:     nil }.to_json)
-          .with(headers: { 'Connection': 'keep-alive',
-                           'Keep-Alive': '30' })
-
-      blockchain.latest_block_number
     end
   end
 

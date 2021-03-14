@@ -3,13 +3,16 @@
 
 FactoryBot.define do
   sequence :transfer_key do
-    "transfer_#{Faker::Number.unique.number(5).to_i}"
+    Faker::Number.unique.number(5).to_i
+  end
+  sequence :transfer_kind do |n|
+    %w[referral-payoff token-distribution member-transfer].sample + "-#{n}"
   end
 
   factory :transfer do
     key  { generate(:transfer_key) }
-    category { Transfer::CATEGORIES.sample }
-    description { "#{category} for #{Time.now.to_date}" }
+    kind { generate(:transfer_kind) }
+    desc { "#{kind} for #{Time.now.to_date}" }
 
     trait :with_assets do
       after(:create) do |t|

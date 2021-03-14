@@ -6,15 +6,13 @@ module API
     module Public
       class Currencies < Grape::API
 
-        helpers ::API::V2::ParamHelpers
-
         desc 'Get a currency' do
           success Entities::Currency
         end
         params do
           requires :id,
                    type: String,
-                   values: { value: -> { Currency.visible.codes(bothcase: true) }, message: 'public.currency.doesnt_exist'},
+                   values: { value: -> { Currency.enabled.codes(bothcase: true) }, message: 'public.currency.doesnt_exist'},
                    desc: -> { API::V2::Entities::Currency.documentation[:id][:desc] }
         end
         get '/currencies/:id' do
@@ -25,17 +23,16 @@ module API
           is_array: true,
           success: Entities::Currency
         params do
-          use :pagination
-          optional :type,
+          optional :type, 
                    type: String,
                    values: { value: %w[fiat coin], message: 'public.currency.invalid_type' },
                    desc: -> { API::V2::Entities::Currency.documentation[:type][:desc] }
         end
         get '/currencies' do
-          currencies = Currency.visible
+          currencies = Currency.enabled
           currencies = currencies.where(type: params[:type]).includes(:blockchain) if params[:type] == 'coin'
           currencies = currencies.where(type: params[:type]) if params[:type] == 'fiat'
-          present paginate(currencies.ordered), with: API::V2::Entities::Currency
+          present currencies.ordered, with: API::V2::Entities::Currency
         end
       end
     end

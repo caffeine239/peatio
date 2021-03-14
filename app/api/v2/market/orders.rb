@@ -7,7 +7,7 @@ module API
       class Orders < Grape::API
         helpers ::API::V2::Market::NamedParams
 
-        desc 'Get your orders, result is paginated.',
+        desc 'Get your orders, results is paginated.',
           is_array: true,
           success: API::V2::Entities::Order
         params do
@@ -16,7 +16,8 @@ module API
                    values: { value: -> { ::Market.enabled.ids }, message: 'market.market.doesnt_exist' },
                    desc: -> { V2::Entities::Market.documentation[:id] }
           optional :state,
-                   values: { value: ->(v) { [*v].all? { |value| value.in? Order.state.values } }, message: 'market.order.invalid_state' },
+                   type: String,
+                   values: { value: -> { Order.state.values }, message: 'market.order.invalid_state' },
                    desc: 'Filter order by state.'
           optional :limit,
                    type: { value: Integer, message: 'market.order.non_integer_limit' },
@@ -48,7 +49,7 @@ module API
                       .tap { |q| q.where!(state: params[:state]) if params[:state] }
                       .tap { |q| q.where!(ord_type: params[:ord_type]) if params[:ord_type] }
                       .tap { |q| q.where!(type: (params[:type] == 'buy' ? 'OrderBid' : 'OrderAsk')) if params[:type] }
-                      .tap { |q| present paginate(q, false), with: API::V2::Entities::Order }
+                      .tap { |q| present paginate(q), with: API::V2::Entities::Order }
         end
 
         desc 'Get information of specified order.',
@@ -64,7 +65,7 @@ module API
         desc 'Create a Sell/Buy order.',
           success: API::V2::Entities::Order
         params do
-          use :enabled_markets, :order
+          use :market, :order
         end
         post '/orders' do
           if params[:ord_type] == 'market' && params.key?(:price)

@@ -6,7 +6,7 @@ describe Matching::LimitOrder do
     it 'should throw invalid order error for empty attributes' do
       expect do
         Matching::LimitOrder.new(type: '', price: '', volume: '')
-      end.to raise_error(Matching::OrderError)
+      end.to raise_error(Matching::InvalidOrderError)
     end
 
     it 'should initialize market' do

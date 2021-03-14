@@ -25,7 +25,7 @@ module Ethereum
     end
 
     def create_address!(options = {})
-      secret = options.fetch(:secret) { PasswordGenerator.generate(64) }
+      secret = options.fetch(:secret) { Passgen.generate(length: 64, symbols: true) }
       secret.yield_self do |password|
         { address: normalize_address(client.json_rpc(:personal_newAccount, [password])),
           secret:  password }
@@ -175,7 +175,7 @@ module Ethereum
 
     def client
       uri = @wallet.fetch(:uri) { raise Peatio::Wallet::MissingSettingError, :uri }
-      @client ||= Client.new(uri, idle_timeout: 1)
+      @client ||= Client.new(uri)
     end
   end
 end

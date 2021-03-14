@@ -46,7 +46,12 @@ module Admin
     private
 
     def wallet_params
-      params.require(:wallet).permit(permitted_wallet_attributes)
+      params.require(:wallet).permit(permitted_wallet_attributes).tap do |params|
+        boolean_attributes.each do |param|
+          next unless params.key?(param)
+          params[param] = params[param].in?(['1', 'true', true])
+        end
+      end
     end
 
     def wallet_settings_params
@@ -61,11 +66,22 @@ module Admin
         address
         max_balance
         kind
+        nsig
+        parent
         status
         gateway
         uri
         secret
+        bitgo_test_net
+        bitgo_wallet_id
+        bitgo_wallet_passphrase
+        bitgo_rest_api_root
+        bitgo_rest_api_access_token
       ]
+    end
+
+    def boolean_attributes
+      %i[bitgo_test_net]
     end
   end
 end

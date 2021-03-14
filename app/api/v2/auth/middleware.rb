@@ -10,12 +10,12 @@ module API
 
           # TODO: UID should be used for member identify.
           env['api_v2.authentic_member_email'] = \
-            JWTAuthenticator.new(request.headers['Authorization']).authenticate
+            JWTAuthenticator.new(headers['Authorization']).authenticate
         end
       private
 
         def auth_by_jwt?
-          request.headers.key?('Authorization')
+          headers.key?('Authorization')
         end
 
         def request
@@ -24,6 +24,10 @@ module API
 
         def params
           request.params
+        end
+
+        def headers
+          request.headers
         end
       end
     end

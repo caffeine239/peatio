@@ -8,7 +8,7 @@ describe Admin::BlockchainsController, type: :controller do
   let :attributes do
     { key:                              'eth-rinkeby-new',
       name:                             'Ethereum Rinkeby',
-      client:                           'geth',
+      client:                           'eth',
       server:                           'http://127.0.0.1:8545',
       height:                           250_000_0,
       min_confirmations:                3,
@@ -35,9 +35,10 @@ describe Admin::BlockchainsController, type: :controller do
     let :new_attributes do
       { key:                              'btc-test',
         name:                             'Bitcoin Testnet',
-        client:                           'bitcoin',
+        client:                           'btc',
         server:                           'http://127.0.0.1:18332',
         height:                           300_000_0,
+        step:                             50,
         min_confirmations:                3,
         explorer_address:                 'https://www.blocktrail.com/BCC/address/\#{address}',
         explorer_transaction:             'https://blockchain.info/tx/\#{txid}',

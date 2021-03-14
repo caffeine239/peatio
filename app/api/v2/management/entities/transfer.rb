@@ -8,17 +8,17 @@ module API
         class Transfer < Base
           expose :key,
                  documentation: {
-                   type: String,
+                   type: Integer,
                    desc: 'Unique Transfer Key.'
                  }
 
-          expose :category,
+          expose :kind,
                  documentation: {
                    type: String,
-                   desc: 'Transfer Category.'
+                   desc: 'Transfer Kind.'
                  }
 
-          expose :description,
+          expose :desc,
                  documentation: {
                    type: String,
                    desc: 'Transfer Description'

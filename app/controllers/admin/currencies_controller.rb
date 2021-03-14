@@ -66,9 +66,7 @@ module Admin
         min_withdraw_amount
         withdraw_limit_24h
         withdraw_limit_72h
-        visible
-        deposit_enabled
-        withdrawal_enabled
+        enabled
         blockchain_key
         position
       ]
@@ -85,7 +83,7 @@ module Admin
     end
 
     def boolean_currency_attributes
-      %i[visible deposit_enabled withdrawal_enabled]
+      %i[ enabled ]
     end
   end
 end

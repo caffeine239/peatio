@@ -75,7 +75,7 @@ module Bench
 
       def construct_coin_deposit
         { amount:  DEFAULT_DEPOSIT_AMOUNT,
-          address: Faker::Blockchain::Bitcoin.address,
+          address: Faker::Bitcoin.address,
           txid:    Faker::Lorem.characters(64),
           txout:   0,
           type:    'Deposits::Coin' }.merge(@options)

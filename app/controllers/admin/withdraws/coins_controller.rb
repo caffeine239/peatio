@@ -27,11 +27,6 @@ module Admin
           process!
         when 'load'
           load!
-        when 'approve'
-          approve!
-        when 'fail'
-          @withdraw.fail!
-          redirect_to admin_withdraw_path(currency.id, @withdraw.id), notice: 'Withdrawal succesfully updated'
         end
       end
 
@@ -55,17 +50,9 @@ module Admin
         redirect_to admin_withdraw_path(currency.id, @withdraw.id), notice: 'Withdrawal succesfully updated.'
       end
 
-      def approve!
-        @withdraw.transaction do
-          @withdraw.update!(txid: params[:txid]) if params[:txid].present?
-          @withdraw.success!
-        end
-        redirect_to admin_withdraw_path(currency.id, @withdraw.id), notice: 'Withdrawal succesfully updated.'
-      end
-
       def load!
         @withdraw.transaction do
-          @withdraw.update!(txid: params[:txid]) if params[:txid].present?
+          @withdraw.update!(txid: params.fetch(:txid))
           @withdraw.load!
         end
         redirect_to admin_withdraw_path(currency.id, @withdraw.id), notice: 'Withdrawal succesfully updated.'

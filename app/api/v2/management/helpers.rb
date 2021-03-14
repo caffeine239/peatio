@@ -14,12 +14,6 @@ module API
           end
         end
 
-        def set_ets_context!
-          Raven.tags_context(
-            peatio_version: Peatio::Application::VERSION
-          ) if defined?(Raven)
-        end
-
         private
 
         def create_platform_operation!(attrs)

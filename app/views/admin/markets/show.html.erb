@@ -9,47 +9,27 @@
       <div class="card">
         <div class="card-body">
           <div class="form-group">
-            <label>Quote Currency</label>
+            <label>Quote currency</label>
             <% if @market.new_record? %>
-              <%= f.select :quote_currency, Currency.codes.map { |code| [code.upcase, code] }, {}, { class: "form-control mb-3" } %>
+              <%= f.select :bid_unit, Currency.codes.map { |code| [code.upcase, code] }, {}, { class: "form-control mb-3" } %>
             <% else %>
-              <div class="mb-3"><%= @market.quote_unit.upcase %></div>
+              <div class="mb-3"><%= @market.bid_unit.upcase %></div>
             <% end %>
 
-            <label>Maximum Price</label>
-            <%= f.number_field :max_price, step: :any, class: 'form-control mb-3' %>
+            <label>Quote currency fee</label>
+            <%= f.text_field :ask_fee, class: 'form-control mb-3' %>
 
-            <label>Minimum Amount</label>
-            <%= f.number_field :min_amount, step: :any, class: 'form-control mb-3' %>
+            <label>Maximum Bid Price</label>
+            <%= f.text_field :max_bid_price, class: 'form-control mb-3' %>
 
-            <label>Price Precision</label>
+            <label>Minimum Bid Amount</label>
+            <%= f.text_field :min_bid_amount, class: 'form-control mb-3' %>
+
+            <label>Bid precision</label>
             <% if @market.new_record? %>
-              <%= f.number_field :price_precision, class: 'form-control mb-3' %>
+              <%= f.number_field :bid_precision, class: 'form-control mb-3' %>
             <% else %>
-              <div><%= @market.price_precision %></div>
-            <% end %>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-body">
-          <div class="form-group">
-            <label>Base Currency</label>
-            <% if @market.new_record? %>
-              <%= f.select :base_currency, Currency.codes.map { |code| [code.upcase, code] }, {}, { class: "form-control mb-3" } %>
-            <% else %>
-              <div class="mb-3"><%= @market.base_unit.upcase %></div>
-            <% end %>
-
-            <label>Minimum Price</label>
-            <%= f.number_field :min_price, step: :any, class: 'form-control mb-3' %>
-
-            <label>Amount Precision</label>
-            <% if @market.new_record? %>
-              <%= f.number_field :amount_precision, class: 'form-control' %>
-            <% else %>
-              <div><%= @market.amount_precision %></div>
+              <div><%= @market.bid_precision %></div>
             <% end %>
           </div>
         </div>
@@ -58,8 +38,37 @@
       <div class="card">
         <div class="card-body">
           <div class="form-group">
-            <label>State</label>
-            <%= f.select :state, Market::STATES, {}, { class: "form-control mb-3" } %>
+            <label>Base currency</label>
+            <% if @market.new_record? %>
+              <%= f.select :ask_unit, Currency.codes.map { |code| [code.upcase, code] }, {}, { class: "form-control mb-3" } %>
+            <% else %>
+              <div class="mb-3"><%= @market.ask_unit.upcase %></div>
+            <% end %>
+
+            <label>Base currency fee</label>
+            <%= f.text_field :bid_fee, class: 'form-control mb-3' %>
+
+            <label>Minimum Ask Price</label>
+            <%= f.text_field :min_ask_price, class: 'form-control mb-3' %>
+
+            <label>Minimum Ask Amount</label>
+            <%= f.text_field :min_ask_amount, class: 'form-control mb-3' %>
+
+            <label>Ask precision</label>
+            <% if @market.new_record? %>
+              <%= f.number_field :ask_precision, class: 'form-control' %>
+            <% else %>
+              <div><%= @market.ask_precision %></div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div class="form-group form-check">
+            <%= f.check_box :enabled, class: 'form-check-input' %>
+            <label class="form-check-label" for="trading_pair_enabled">Enabled</label>
           </div>
           <div class="form-group">
             <label>Position</label>

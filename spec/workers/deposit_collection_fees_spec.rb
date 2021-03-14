@@ -1,7 +1,7 @@
 # encoding: UTF-8
 # frozen_string_literal: true
 
-describe Workers::AMQP::DepositCollectionFees do
+describe Worker::DepositCollectionFees do
   let(:deposit) do
     create(:deposit, :deposit_trst).tap { |d| d.accept! }
   end
@@ -27,12 +27,12 @@ describe Workers::AMQP::DepositCollectionFees do
   end
 
   it 'calls spread_deposit, deposit_collection_fees! and returns true' do
-    expect(Workers::AMQP::DepositCollectionFees.new.process(deposit)).to be_truthy
+    expect(Worker::DepositCollectionFees.new.process(deposit)).to be_truthy
   end
 
   it 'updates deposit spread' do
     expect(deposit.spread).to eq([])
-    expect{ Workers::AMQP::DepositCollectionFees.new.process(deposit) }.to change{deposit.reload.spread}
+    expect{ Worker::DepositCollectionFees.new.process(deposit) }.to change{deposit.reload.spread}
     expect(deposit.reload.spread).to eq(spread)
   end
 end

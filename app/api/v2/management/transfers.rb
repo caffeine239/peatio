@@ -12,12 +12,12 @@ module API
         end
         params do
           requires :key,
-                   type: String,
+                   type: Integer,
                    desc: 'Unique Transfer Key.'
-          requires :category,
+          requires :kind,
                    type: String,
-                   desc: 'Transfer Category.'
-          optional :description,
+                   desc: 'Transfer Kind.'
+          optional :desc,
                    type: String,
                    desc: 'Transfer Description.'
 
@@ -59,37 +59,33 @@ module API
         post '/transfers/new' do
           declared_params = declared(params)
 
-          attrs = declared_params.slice(:key, :category, :description)
+          Transfer.transaction do
+            transfer = Transfer.create!(declared_params.slice(:key, :kind, :desc))
+            declared_params[:operations].map do |op_pair|
+              shared_params = { currency: op_pair[:currency],
+                                reference: transfer }
 
-          declared_params[:operations].each do |op_pair|
-            currency = Currency.find(op_pair[:currency])
+              debit_params = op_pair[:account_src]
+                               .merge(debit: op_pair[:amount])
+                               .merge(shared_params)
+                               .compact
 
-            debit_op = op_pair[:account_src].merge(debit: op_pair[:amount], credit: 0.0, currency: currency)
-            credit_op = op_pair[:account_dst].merge(credit: op_pair[:amount], debit: 0.0, currency: currency)
 
-            [debit_op, credit_op].each do |op|
-              klass = ::Operations.klass_for(code: op['code'])
+              credit_params = op_pair[:account_dst]
+                               .merge(credit: op_pair[:amount])
+                               .merge(shared_params)
+                               .compact
 
-              uid = op.delete(:uid)
-              op.merge!(member: Member.find_by!(uid: uid)) if uid.present?
-
-              type = ::Operations::Account.find_by(code: op[:code]).type
-              type_plural = type.pluralize
-              if attrs[type_plural].present?
-                attrs[type_plural].push(klass.new(op))
-              else
-                attrs[type_plural] = [klass.new(op)]
-              end
+              create_operation!(debit_params)
+              create_operation!(credit_params)
             end
           end
 
-          present Transfer.create!(attrs), with: Entities::Transfer
-          status 201
+          present Transfer.find_by!(key: declared_params[:key]),
+                  with: Entities::Transfer
+          status 200
         rescue ActiveRecord::RecordInvalid => e
           body errors: e.message
-          status 422
-        rescue ::Account::AccountError => e
-          body errors: "Account balance is insufficient (#{e.message})"
           status 422
         end
       end

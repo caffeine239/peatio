@@ -23,8 +23,8 @@ describe API::V2::Management::Withdraws, type: :request do
     before do
       Withdraw::STATES.tap do |states|
         (states.count * 2).times do
-          create(:btc_withdraw, :with_deposit_liability, member: members.sample, aasm_state: states.sample, rid: Faker::Blockchain::Bitcoin.address)
-          create(:usd_withdraw, :with_deposit_liability, member: members.sample, aasm_state: states.sample, rid: Faker::Bank.iban)
+          create(:btc_withdraw, member: members.sample, aasm_state: states.sample, rid: Faker::Blockchain::Bitcoin.address)
+          create(:usd_withdraw, member: members.sample, aasm_state: states.sample, rid: Faker::Bank.iban)
         end
       end
     end
@@ -104,72 +104,6 @@ describe API::V2::Management::Withdraws, type: :request do
         expect(record.account.locked).to eq amount
       end
 
-      context 'disabled currency' do
-        before do
-          currency.update(withdrawal_enabled: false)
-        end
-
-        it 'returns error for disabled withdrawal' do
-          request
-          expect(response).to have_http_status(422)
-          expect(response).to include_api_error('management.currency.withdrawal_disabled')
-        end
-      end
-
-      context 'withdrawal with beneficiary' do
-        let(:beneficiary) { create(:beneficiary, state: :active, currency: currency) }
-        let(:data) do
-          { uid:      member.uid,
-            currency: currency.code,
-            amount:   amount,
-            beneficiary_id: beneficiary.id }
-        end
-
-        it 'creates new withdraw and immediately submits it' do
-          request
-          expect(response).to have_http_status(201)
-          record = Withdraw.find_by_tid!(JSON.parse(response.body).fetch('tid'))
-          expect(record.sum).to eq 0.1575
-          expect(record.aasm_state).to eq 'submitted'
-          expect(record.rid).to eq beneficiary.rid
-          expect(record.account).to eq account
-          expect(record.account.balance).to eq (1.2 - amount)
-          expect(record.account.locked).to eq amount
-        end
-
-        context 'pending beneficiary' do
-          before do
-            beneficiary.update(state: :pending)
-          end
-
-          it 'returns error for pending beneficiary' do
-            request
-            expect(response).to have_http_status(422)
-            expect(response).to include_api_error('management.beneficiary.invalid_state_for_withdrawal')
-          end
-        end
-
-        context 'withdrawal with note' do
-          let(:member) { create(:member, :barong) }
-          let(:currency) { Currency.find(:btc) }
-          let(:amount) { 0.1575 }
-          let(:signers) { %i[alex jeff] }
-          let :data do
-            { uid:      member.uid,
-              currency: currency.code,
-              amount:   amount,
-              rid:      Faker::Blockchain::Bitcoin.address,
-              note:     'Withdraw money'
-            }
-          end
-
-          it 'returns new withdraw with correct note' do
-            request
-            expect(JSON.parse(response.body)['note']).to eq 'Withdraw money'
-          end
-        end
-      end
-
       context 'action: :process' do
         it 'creates new withdraw and immediately submits it' do
           data.merge!(action: 'process')
@@ -243,7 +177,7 @@ describe API::V2::Management::Withdraws, type: :request do
 
     let(:signers) { %i[alex jeff] }
     let(:data) { { tid: record.tid } }
-    let(:record) { create(:btc_withdraw, :with_deposit_liability, member: member) }
+    let(:record) { create(:btc_withdraw, member: member) }
     let(:member) { create(:member, :barong) }
 
     it 'returns withdraw by TID' do
@@ -263,7 +197,7 @@ describe API::V2::Management::Withdraws, type: :request do
     let(:signers) { %i[alex jeff] }
     let(:data) { { tid: record.tid } }
     let(:account) { member.accounts.with_currency(currency).first }
-    let(:record) { "Withdraws::#{currency.type.camelize}".constantize.create!(member: member, sum: amount, rid: Faker::Bank.iban, currency: currency) }
+    let(:record) { "Withdraws::#{currency.type.camelize}".constantize.create!(member: member, account: account, sum: amount, rid: Faker::Bank.iban, currency: currency) }
     let(:balance) { 800.77 }
     before { account.plus_funds(balance) }
 

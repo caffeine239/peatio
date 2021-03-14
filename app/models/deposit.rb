@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 class Deposit < ApplicationRecord
-  STATES = %i[submitted canceled rejected accepted collected skipped].freeze
+  STATES = %i[submitted canceled rejected accepted collected].freeze
 
   serialize :spread, Array
 
@@ -82,7 +82,6 @@ class Deposit < ApplicationRecord
 
   def as_json_for_event_api
     { tid:                      tid,
-      user:                     { uid: member.uid, email: member.email },
       uid:                      member.uid,
       currency:                 currency_id,
       amount:                   amount.to_s('F'),

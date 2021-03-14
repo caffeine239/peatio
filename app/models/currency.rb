@@ -3,8 +3,6 @@
 
 class Currency < ApplicationRecord
 
-  # == Constants ============================================================
-
   DEFAULT_OPTIONS_SCHEMA = {
     erc20_contract_address: {
       title: 'ERC20 Contract Address',
@@ -12,34 +10,20 @@ class Currency < ApplicationRecord
     }
   }
   OPTIONS_ATTRIBUTES = %i[erc20_contract_address gas_limit gas_price].freeze
-
-  # == Attributes ===========================================================
-
-  attr_readonly :id,
-                :type,
-                :base_factor
-
-  # Code is aliased to id because it's more user-friendly primary key.
-  # It's preferred to use code where this attributes are equal.
-  alias_attribute :code, :id
-
-  # == Extensions ===========================================================
-
   store :options, accessors: OPTIONS_ATTRIBUTES, coder: JSON
-
-  # == Relationships ========================================================
 
   belongs_to :blockchain, foreign_key: :blockchain_key, primary_key: :key
 
-  # == Validations ==========================================================
+  # NOTE: type column reserved for STI
+  self.inheritance_column = nil
 
-  validates :code, presence: true, uniqueness: { case_sensitive: false }
-
+  validates :id, presence: true, uniqueness: true
+  # TODO: Add specs to this validation.
   validates :blockchain_key,
-            inclusion: { in: ->(_) { Blockchain.pluck(:key).map(&:to_s) } },
+            inclusion: { in: -> (_) { Blockchain.pluck(:key).map(&:to_s) } },
             if: :coin?
 
-  validates :type, inclusion: { in: ->(_) { Currency.types.map(&:to_s) } }
+  validates :type, inclusion: { in: -> (_) { Currency.types.map(&:to_s) } }
   validates :symbol, presence: true, length: { maximum: 1 }
   validates :options, length: { maximum: 1000 }
   validates :base_factor, numericality: { greater_than_or_equal_to: 1, only_integer: true }
@@ -51,25 +35,15 @@ class Currency < ApplicationRecord
             :min_withdraw_amount,
             :withdraw_limit_24h,
             :withdraw_limit_72h,
-            :precision,
-            :position,
             numericality: { greater_than_or_equal_to: 0 }
 
   validate :validate_options
+  validate { errors.add(:base, 'Cannot disable display currency!') if disabled? && code == ENV.fetch('DISPLAY_CURRENCY').downcase }
 
-  # == Scopes ===============================================================
-
-  scope :visible, -> { where(visible: true) }
-  scope :deposit_enabled, -> { where(deposit_enabled: true) }
-  scope :withdrawal_enabled, -> { where(withdrawal_enabled: true) }
-  scope :ordered, -> { order(position: :asc) }
-  scope :coins,   -> { where(type: :coin) }
-  scope :fiats,   -> { where(type: :fiat) }
-
-  # == Callbacks ============================================================
+  # TODO: Add specs to this validation.
+  validate :must_not_disable_all_markets, on: :update
 
   before_validation :initialize_options
-  before_validation { self.code = code.downcase }
   before_validation { self.deposit_fee = 0 unless fiat? }
 
   before_validation do
@@ -80,21 +54,23 @@ class Currency < ApplicationRecord
 
   after_update :disable_markets
 
-  # == Class Methods ========================================================
+  scope :enabled, -> { where(enabled: true) }
+  scope :ordered, -> { order(position: :asc) }
+  scope :coins,   -> { where(type: :coin) }
+  scope :fiats,   -> { where(type: :fiat) }
 
-  # NOTE: type column reserved for STI
-  self.inheritance_column = nil
+  delegate :explorer_transaction, :blockchain_api, :explorer_address, to: :blockchain
 
   class << self
     def codes(options = {})
       pluck(:id).yield_self do |downcase_codes|
         case
-        when options.fetch(:bothcase, false)
-          downcase_codes + downcase_codes.map(&:upcase)
-        when options.fetch(:upcase, false)
-          downcase_codes.map(&:upcase)
-        else
-          downcase_codes
+          when options.fetch(:bothcase, false)
+            downcase_codes + downcase_codes.map(&:upcase)
+          when options.fetch(:upcase, false)
+            downcase_codes.map(&:upcase)
+          else
+            downcase_codes
         end
       end
     end
@@ -104,26 +80,20 @@ class Currency < ApplicationRecord
     end
   end
 
-  # == Instance Methods =====================================================
+  # Allows to dynamically check value of code:
+  #
+  #   code.btc? # true if code equals to "btc".
+  #   code.eth? # true if code equals to "eth".
+  #
+  def code
+    id&.inquiry
+  end
 
-  delegate :explorer_transaction, :blockchain_api, :explorer_address, to: :blockchain
+  def code=(code)
+    self.id = code.to_s.downcase
+  end
 
   types.each { |t| define_method("#{t}?") { type == t.to_s } }
-
-  # Allows to dynamically check value of id/code:
-  #
-  #   id.btc? # true if code equals to "btc".
-  #   code.eth? # true if code equals to "eth".
-  def id
-    super&.inquiry
-  end
-
-  # subunit (or fractional monetary unit) - a monetary unit
-  # that is valued at a fraction (usually one hundredth)
-  # of the basic monetary unit
-  def subunits=(n)
-    self.base_factor = 10 ** n
-  end
 
   def as_json(*)
     { code: code,
@@ -151,17 +121,27 @@ class Currency < ApplicationRecord
       hot:      coin? ? balance : nil }
   end
 
+  def disabled?
+    !enabled
+  end
+
   def is_erc20?
     erc20_contract_address.present?
   end
 
   def dependent_markets
-    Market.where('base_unit = ? OR quote_unit = ?', id, id)
+    Market.where('ask_unit = ? OR bid_unit = ?', id, id)
   end
 
   def disable_markets
-    unless visible?
-      dependent_markets.update_all(state: :disabled)
+    unless enabled?
+      dependent_markets.update_all(enabled: false)
+    end
+  end
+
+  def must_not_disable_all_markets
+    if enabled_was && !enabled? && (Market.enabled.count - dependent_markets.enabled.count).zero?
+      errors.add(:currency, 'disables all enabled markets.')
     end
   end
 
@@ -186,13 +166,13 @@ class Currency < ApplicationRecord
           : OPTIONS_ATTRIBUTES.map(&:to_s).map{|v| [v, '']}.to_h
   end
 
-  def subunits
-    Math.log(self.base_factor, 10).round
-  end
+  attr_readonly :id,
+                :code,
+                :type
 end
 
 # == Schema Information
-# Schema version: 20190923085927
+# Schema version: 20190529142209
 #
 # Table name: currencies
 #
@@ -210,10 +190,8 @@ end
 #  withdraw_limit_72h    :decimal(32, 16)  default(0.0), not null
 #  position              :integer          default(0), not null
 #  options               :string(1000)     default({})
-#  visible               :boolean          default(TRUE), not null
-#  deposit_enabled       :boolean          default(TRUE), not null
-#  withdrawal_enabled    :boolean          default(TRUE), not null
-#  base_factor           :bigint           default(1), not null
+#  enabled               :boolean          default(TRUE), not null
+#  base_factor           :bigint(8)        default(1), not null
 #  precision             :integer          default(8), not null
 #  icon_url              :string(255)
 #  created_at            :datetime         not null
@@ -221,6 +199,7 @@ end
 #
 # Indexes
 #
-#  index_currencies_on_position  (position)
-#  index_currencies_on_visible   (visible)
+#  index_currencies_on_enabled           (enabled)
+#  index_currencies_on_enabled_and_code  (enabled)
+#  index_currencies_on_position          (position)
 #

@@ -22,9 +22,6 @@ terminate = proc do
   ch.work_pool.kill
   puts "Stopped."
 end
-
-at_exit { conn.close }
-
 Signal.trap("INT",  &terminate)
 Signal.trap("TERM", &terminate)
 
@@ -60,24 +57,18 @@ ARGV.each do |id|
       args          = [JSON.parse(payload), metadata, delivery_info]
       arity         = worker.method(:process).arity
       resized_args  = arity < 0 ? args : args[0...arity]
-      worker.process(*resized_args)
+      worker.method(:process).call(*resized_args)
 
       # Send confirmation to RabbitMQ that message has been successfully processed.
       # See http://rubybunny.info/articles/queues.html
       ch.ack(delivery_info.delivery_tag)
 
-    rescue StandardError => e
+    rescue => e
+      report_exception(e)
 
       # Ask RabbitMQ to deliver message once again later.
       # See http://rubybunny.info/articles/queues.html
       ch.nack(delivery_info.delivery_tag, false, true)
-
-      if worker.is_db_connection_error?(e)
-        logger.error(db: :unhealthy, message: e.message)
-        exit(1)
-      end
-
-      report_exception(e)
     end
   end
 

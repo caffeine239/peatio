@@ -1,12 +1,12 @@
 # Peatio Management API v2
 Management API is server-to-server API with high privileges.
 
-## Version: 2.3.44
+## Version: 2.2.11
 
 **Contact information:**  
-openware.com  
-https://www.openware.com  
-hello@openware.com  
+peatio.tech  
+https://www.peatio.tech  
+hello@peatio.tech  
 
 **License:** https://github.com/rubykube/peatio/blob/master/LICENSE.md
 
@@ -148,7 +148,7 @@ Creates new withdraw.
 
 ##### Description:
 
-Creates new withdraw. The behaviours for fiat and crypto withdraws are different. Fiat: money are immediately locked, withdraw state is set to «submitted», system workers will validate withdraw later against suspected activity, and assign state to «rejected» or «accepted». The processing will not begin automatically. The processing may be initiated manually from admin panel or by PUT /management_api/v1/withdraws/action. Coin: money are immediately locked, withdraw state is set to «submitted», system workers will validate withdraw later against suspected activity, validate withdraw address and set state to «rejected» or «accepted». Then in case state is «accepted» withdraw workers will perform interactions with blockchain. The withdraw receives new state «processing». Then withdraw receives state either «confirming» or «failed».Then in case state is «confirming» withdraw confirmations workers will perform interactions with blockchain.Withdraw receives state «succeed» when it receives minimum necessary amount of confirmations.
+Creates new withdraw. The behaviours for fiat and crypto withdraws are different. Fiat: money are immediately locked, withdraw state is set to «submitted», system workers will validate withdraw later against suspected activity, and assign state to «rejected» or «accepted». The processing will not begin automatically. The processing may be initiated manually from admin panel or by PUT /management_api/v1/withdraws/action. Coin: money are immediately locked, withdraw state is set to «submitted», system workers will validate withdraw later against suspected activity, validate withdraw address and 
 
 ##### Parameters
 
@@ -156,8 +156,7 @@ Creates new withdraw. The behaviours for fiat and crypto withdraws are different
 | ---- | ---------- | ----------- | -------- | ---- |
 | uid | formData | The shared user ID. | Yes | string |
 | tid | formData | The shared transaction ID. Must not exceed 64 characters. Peatio will generate one automatically unless supplied. | No | string |
-| rid | formData | The beneficiary ID or wallet address on the Blockchain. | No | string |
-| beneficiary_id | formData | ID of Active Beneficiary belonging to user. | No | string |
+| rid | formData | The beneficiary ID or wallet address on the Blockchain. | Yes | string |
 | currency | formData | The currency code. | Yes | string |
 | amount | formData | The amount to withdraw. | Yes | double |
 | action | formData | The action to perform. | No | string |
@@ -420,9 +419,9 @@ Creates new transfer.
 
 | Name | Located in | Description | Required | Schema |
 | ---- | ---------- | ----------- | -------- | ---- |
-| key | formData | Unique Transfer Key. | Yes | string |
-| category | formData | Transfer Category. | Yes | string |
-| description | formData | Transfer Description. | No | string |
+| key | formData | Unique Transfer Key. | Yes | integer |
+| kind | formData | Transfer Kind. | Yes | string |
+| desc | formData | Transfer Description. | No | string |
 | operations[currency] | formData | Operation currency. | Yes | [ string ] |
 | operations[amount] | formData | Operation amount. | Yes | [ double ] |
 | operations[account_src][code] | formData | Source Account code. | Yes | [ integer ] |
@@ -457,127 +456,6 @@ Returns trades as paginated collection.
 | Code | Description | Schema |
 | ---- | ----------- | ------ |
 | 201 | Returns trades as paginated collection. | [Trade](#trade) |
-
-### /members/group
-
-#### POST
-##### Description:
-
-Set user group.
-
-##### Parameters
-
-| Name | Located in | Description | Required | Schema |
-| ---- | ---------- | ----------- | -------- | ---- |
-| uid | formData | The shared user ID. | Yes | string |
-| group | formData | User gruop | Yes | string |
-
-##### Responses
-
-| Code | Description |
-| ---- | ----------- |
-| 201 | Set user group. |
-
-### /fee_schedule/trading_fees
-
-#### POST
-##### Description:
-
-Returns trading_fees table as paginated collection
-
-##### Parameters
-
-| Name | Located in | Description | Required | Schema |
-| ---- | ---------- | ----------- | -------- | ---- |
-| group | formData | Member group | No | string |
-| market_id | formData | Market id | No | string |
-| page | formData | The page number (defaults to 1). | No | integer |
-| limit | formData | The number of objects per page (defaults to 100, maximum is 1000). | No | integer |
-
-##### Responses
-
-| Code | Description |
-| ---- | ----------- |
-| 201 | Returns trading_fees table as paginated collection |
-
-### /currencies/update
-
-#### PUT
-##### Description:
-
-Update  currency.
-
-##### Parameters
-
-| Name | Located in | Description | Required | Schema |
-| ---- | ---------- | ----------- | -------- | ---- |
-| id | formData | Currency code. | Yes | string |
-| name | formData | Currency name | No | string |
-| deposit_fee | formData | Currency deposit fee | No | double |
-| min_deposit_amount | formData | Minimal deposit amount | No | double |
-| min_collection_amount | formData | Minimal deposit amount that will be collected | No | double |
-| withdraw_fee | formData | Currency withdraw fee | No | double |
-| min_withdraw_amount | formData | Minimal withdraw amount | No | double |
-| withdraw_limit_24h | formData | Currency 24h withdraw limit | No | double |
-| withdraw_limit_72h | formData | Currency 72h withdraw limit | No | double |
-| position | formData | Currency position. | No | integer |
-| options | formData | Currency options. | No | json |
-| visible | formData | Currency display possibility status (true/false). | No | boolean |
-| deposit_enabled | formData | Currency deposit possibility status (true/false). | No | boolean |
-| withdrawal_enabled | formData | Currency withdrawal possibility status (true/false). | No | boolean |
-| precision | formData | Currency precision | No | integer |
-| icon_url | formData | Currency icon | No | string |
-
-##### Responses
-
-| Code | Description | Schema |
-| ---- | ----------- | ------ |
-| 200 | Update  currency. | [Currency](#currency) |
-
-### /currencies/{code}
-
-#### POST
-##### Description:
-
-Returns currency by code.
-
-##### Parameters
-
-| Name | Located in | Description | Required | Schema |
-| ---- | ---------- | ----------- | -------- | ---- |
-| code | path | The currency code. | Yes | string |
-
-##### Responses
-
-| Code | Description | Schema |
-| ---- | ----------- | ------ |
-| 201 | Returns currency by code. | [Currency](#currency) |
-
-### /markets/update
-
-#### PUT
-##### Description:
-
-Update market.
-
-##### Parameters
-
-| Name | Located in | Description | Required | Schema |
-| ---- | ---------- | ----------- | -------- | ---- |
-| id | formData | Unique market id. It's always in the form of xxxyyy,where xxx is the base currency code, yyy is the quotecurrency code, e.g. 'btcusd'. All available markets canbe found at /api/v2/markets. | Yes | string |
-| state | formData | Market state defines if user can see/trade on current market. | No | string |
-| min_price | formData | Minimum order price. | No | double |
-| min_amount | formData | Minimum order amount. | No | double |
-| amount_precision | formData | Precision for order amount. | No | integer |
-| price_precision | formData | Precision for order price. | No | integer |
-| max_price | formData | Maximum order price. | No | double |
-| position | formData | Market position. | No | integer |
-
-##### Responses
-
-| Code | Description | Schema |
-| ---- | ----------- | ------ |
-| 200 | Update market. | [Market](#market) |
 
 ### Models
 
@@ -648,67 +526,14 @@ Returns trades as paginated collection.
 | ---- | ---- | ----------- | -------- |
 | id | string | Trade ID. | No |
 | price | double | Trade price. | No |
-| amount | double | Trade amount. | No |
-| total | double | Trade total. | No |
+| volume | double | Trade volume. | No |
+| funds | double | Trade funds. | No |
 | market | string | Trade market id. | No |
 | created_at | string | Trade create time in iso8601 format. | No |
-| maker_order_id | string | Trade maker order id. | No |
-| taker_order_id | string | Trade taker order id. | No |
-| maker_member_uid | string | Trade ask member uid. | No |
-| taker_member_uid | string | Trade bid member uid. | No |
+| ask_id | string | Trade ask order id. | No |
+| bid_id | string | Trade bid order id. | No |
+| ask_member_uid | string | Trade ask member uid. | No |
+| bid_member_uid | string | Trade bid member uid. | No |
 | taker_type | string | Trade maker order type (sell or buy). | No |
 | side | string | Trade side. | No |
 | order_id | integer | Order id. | No |
-
-#### Currency
-
-Returns currency by code.
-
-| Name | Type | Description | Required |
-| ---- | ---- | ----------- | -------- |
-| id | string | Currency code. | No |
-| name | string | Currency name | No |
-| symbol | string | Currency symbol | No |
-| explorer_transaction | string | Currency transaction exprorer url template | No |
-| explorer_address | string | Currency address exprorer url template | No |
-| type | string | Currency type | No |
-| deposit_enabled | string | Currency deposit possibility status (true/false). | No |
-| withdrawal_enabled | string | Currency withdrawal possibility status (true/false). | No |
-| deposit_fee | string | Currency deposit fee | No |
-| min_deposit_amount | string | Minimal deposit amount | No |
-| withdraw_fee | string | Currency withdraw fee | No |
-| min_withdraw_amount | string | Minimal withdraw amount | No |
-| withdraw_limit_24h | string | Currency 24h withdraw limit | No |
-| withdraw_limit_72h | string | Currency 72h withdraw limit | No |
-| base_factor | string | Currency base factor | No |
-| precision | string | Currency precision | No |
-| icon_url | string | Currency icon | No |
-| min_confirmations | string | Number of confirmations required for confirming deposit or withdrawal | No |
-| code | string | Unique currency code. | No |
-| min_collection_amount | string | Minimal deposit amount that will be collected | No |
-| visible | string | Currency display possibility status (true/false). | No |
-| subunits | integer | Fraction of the basic monetary unit. | No |
-| options | json | Currency options. | No |
-| position | integer | Currency position. | No |
-| created_at | string | Currency created time in iso8601 format. | No |
-| updated_at | string | Currency updated time in iso8601 format. | No |
-
-#### Market
-
-Update market.
-
-| Name | Type | Description | Required |
-| ---- | ---- | ----------- | -------- |
-| id | string | Unique market id. It's always in the form of xxxyyy,where xxx is the base currency code, yyy is the quotecurrency code, e.g. 'btcusd'. All available markets canbe found at /api/v2/markets. | No |
-| name | string | Market name. | No |
-| base_unit | string | Market Base unit. | No |
-| quote_unit | string | Market Quote unit. | No |
-| min_price | double | Minimum order price. | No |
-| max_price | double | Maximum order price. | No |
-| min_amount | double | Minimum order amount. | No |
-| amount_precision | double | Precision for order amount. | No |
-| price_precision | double | Precision for order price. | No |
-| state | string | Market state defines if user can see/trade on current market. | No |
-| position | integer | Market position. | No |
-| created_at | string | Market created time in iso8601 format. | No |
-| updated_at | string | Market updated time in iso8601 format. | No |

@@ -40,7 +40,7 @@ describe Ethereum::Wallet do
     end
 
     before do
-      PasswordGenerator.stubs(:generate).returns('pass@word')
+      Passgen.stubs(:generate).returns('pass@word')
       wallet.configure(settings)
     end
 

@@ -62,12 +62,12 @@ class Trigger < ApplicationRecord
 end
 
 # == Schema Information
-# Schema version: 20190711114027
+# Schema version: 20190529142209
 #
 # Table name: triggers
 #
-#  id         :bigint           not null, primary key
-#  order_id   :bigint           not null
+#  id         :bigint(8)        not null, primary key
+#  order_id   :bigint(8)        not null
 #  order_type :integer          unsigned, not null
 #  value      :binary(128)      not null
 #  state      :integer          default("pending"), unsigned, not null

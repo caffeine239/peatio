@@ -4,27 +4,33 @@
 FactoryBot.define do
   factory :market do
     trait :btcusd do
-      id                { 'btcusd' }
-      base_currency     { 'btc' }
-      quote_currency    { 'usd' }
-      amount_precision  { 8 }
-      price_precision   { 2 }
-      min_price         { 0.01 }
-      min_amount        { 0.00000001 }
-      position          { 1 }
-      state             { :enabled }
+      id             { 'btcusd' }
+      ask_unit       { 'btc' }
+      bid_unit       { 'usd' }
+      ask_fee        { 0.0015 }
+      bid_fee        { 0.0015 }
+      ask_precision  { 4 }
+      bid_precision  { 4 }
+      min_ask_price  { 0.0 }
+      min_ask_amount { 0.0 }
+      min_bid_amount { 0.0 }
+      position       { 1 }
+      enabled        { true }
     end
 
     trait :btceth do
-      id                { 'btceth' }
-      base_currency     { 'btc' }
-      quote_currency    { 'eth' }
-      amount_precision  { 4 }
-      price_precision   { 6 }
-      min_price         { 0.000001 }
-      min_amount        { 0.0001 }
-      position          { 3 }
-      state             { :enabled }
+      id             { 'btceth' }
+      ask_unit       { 'btc' }
+      bid_unit       { 'eth' }
+      ask_fee        { 0.0015 }
+      bid_fee        { 0.0015 }
+      ask_precision  { 4 }
+      bid_precision  { 4 }
+      min_ask_price  { 0.0 }
+      min_ask_amount { 0.0 }
+      min_bid_amount { 0.0 }
+      position       { 3 }
+      enabled        { true }
     end
   end
 end
