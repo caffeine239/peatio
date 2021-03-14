@@ -59,23 +59,27 @@ describe Market do
 
   context 'validations' do
     let(:valid_attributes) do
-      { base_currency:    :btc,
-        quote_currency:   :trst,
-        min_amount:       0.0001,
-        min_price:        0.0001,
-        amount_precision: 4,
-        price_precision:  4,
-        position:         100 }
+      { base_currency:      :btc,
+        quote_currency:     :trst,
+        base_currency_fee:  0.1,
+        quote_currency_fee: 0.2,
+        min_amount:         0.0001,
+        min_price:          0.0001,
+        amount_precision:   4,
+        price_precision:    4,
+        position:           100 }
     end
 
     let(:mirror_attributes) do
-      { base_currency:    :usd,
-        quote_currency:   :btc,
-        min_amount:       0.0001,
-        min_price:        0.0001,
-        amount_precision: 4,
-        price_precision:  4,
-        position:         100 }
+      { base_currency:      :usd,
+        quote_currency:     :btc,
+        base_currency_fee:  0.1,
+        quote_currency_fee: 0.2,
+        min_amount:         0.0001,
+        min_price:          0.0001,
+        amount_precision:   4,
+        price_precision:    4,
+        position:           100 }
     end
 
     let(:disabled_currency) { Currency.find_by_id(:eur) }
@@ -113,7 +117,8 @@ describe Market do
     end
 
     it 'validates fields to be greater than or equal to 0' do
-      %i[price_precision amount_precision position].each do |field|
+      %i[base_currency_fee quote_currency_fee
+         price_precision amount_precision position].each do |field|
         record = Market.new(valid_attributes.merge(field => -1))
         record.save
         expect(record.errors.full_messages).to include(/#{to_readable(field)} must be greater than or equal to 0/i)
@@ -136,11 +141,11 @@ describe Market do
       end
     end
 
-    it 'validates if both currencies visible on enabled market creation' do
+    it 'validates if both currencies enabled on enabled market creation' do
       %i[base_currency quote_currency].each do |field|
         record = Market.new(valid_attributes.merge(field => disabled_currency.code))
         record.save
-        expect(record.errors.full_messages).to include(/#{to_readable(field)} is not visible/i)
+        expect(record.errors.full_messages).to include(/#{to_readable(field)} is not enabled/i)
       end
     end
 
@@ -171,6 +176,18 @@ describe Market do
       expect(record.errors.full_messages).to include(/#{to_readable(:min_amount)} must be greater than or equal to 0.01/i)
     end
 
+    it 'validates fee preciseness' do
+      record = Market.create(valid_attributes)
+
+      %i[bid_fee ask_fee].each do |f|
+        record.reload
+        expect(record.update(f => 0.0001)).to eq true
+        expect(record.update(f => 0.00011)).to eq false
+        expect(record.update(f => 0.00001)).to eq false
+        expect(record.update(f => 0.02000003)).to eq false
+      end
+    end
+
     it 'allows to set min_amount greater than value defined by amount_precision' do
       record = Market.new(valid_attributes.merge(min_amount: 1))
       expect(record.save).to eq true
@@ -178,19 +195,6 @@ describe Market do
 
     def to_readable(field)
       field.to_s.humanize.downcase
-    end
-  end
-
-  context 'relationships' do
-    subject { Market.find(:btcusd) }
-    before do
-      create(:trading_fee, market_id: :btcusd)
-      create(:trading_fee, market_id: :btceth)
-      create(:trading_fee)
-    end
-
-    it 'deletes only btcusd trading_fee' do
-      expect { subject.destroy! }.to change(TradingFee, :count).by(-1)
     end
   end
 end

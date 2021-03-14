@@ -19,7 +19,6 @@ module Abilities
       can :read, PaymentAddress
 
       can :create, Deposits::Fiat
-      can :create, Adjustment
     end
   end
 end

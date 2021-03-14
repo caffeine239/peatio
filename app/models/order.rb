@@ -1,8 +1,6 @@
 # encoding: UTF-8
 # frozen_string_literal: true
 
-require 'csv'
-
 class Order < ApplicationRecord
   include BelongsToMarket
   include BelongsToMember
@@ -17,44 +15,36 @@ class Order < ApplicationRecord
   TYPES = %w[ market limit ]
   enumerize :ord_type, in: TYPES, scope: true
 
-  belongs_to :ask_currency, class_name: 'Currency', foreign_key: :ask
-  belongs_to :bid_currency, class_name: 'Currency', foreign_key: :bid
   after_commit :trigger_pusher_event
 
   validates :ord_type, :volume, :origin_volume, :locked, :origin_locked, presence: true
   validates :price, numericality: { greater_than: 0 }, if: ->(order) { order.ord_type == 'limit' }
 
   validates :origin_volume,
-            numericality: { greater_than: 0, greater_than_or_equal_to: ->(order){ order.market.min_amount } },
-            on: :create
-
-  validates :origin_volume, precision: { less_than_or_eq_to: ->(o) { o.market.amount_precision } },
-                            if: ->(o) { o.origin_volume.present? }, on: :create
+            presence: true,
+            numericality: { greater_than: 0, greater_than_or_equal_to: ->(order){ order.market.min_amount } }
+  validate do
+    if origin_volume.present? && !market.valid_precision?(origin_volume, market.amount_precision)
+      errors.add(:origin_volume, 'is too precise')
+    end
+  end
 
   validate  :market_order_validations, if: ->(order) { order.ord_type == 'market' }
 
   validates :price, presence: true, if: :is_limit_order?
-
-  validates :price, precision: { less_than_or_eq_to: ->(o) { o.market.price_precision } },
-                    if: ->(o) { o.price.present? }, on: :create
+  validate do
+    if price.present? && !market.valid_precision?(price, market.price_precision)
+      errors.add(:price, 'is too precise')
+    end
+  end
 
   validates :price,
             numericality: { less_than_or_equal_to: ->(order){ order.market.max_price }},
-            if: ->(order) { order.is_limit_order? && order.market.max_price.nonzero? },
-            on: :create
+            if: ->(order) { order.is_limit_order? && order.market.max_price.nonzero? }
 
   validates :price,
             numericality: { greater_than_or_equal_to: ->(order){ order.market.min_price }},
-            if: :is_limit_order?, on: :create
-
-  attr_readonly :member_id,
-                :bid,
-                :ask,
-                :market_id,
-                :ord_type,
-                :origin_volume,
-                :origin_locked,
-                :created_at
+            if: :is_limit_order?
 
   PENDING = 'pending'
   WAIT    = 'wait'
@@ -65,20 +55,7 @@ class Order < ApplicationRecord
   scope :done, -> { with_state(:done) }
   scope :active, -> { with_state(:wait) }
 
-  # Custom ransackers.
-
-  ransacker :state, formatter: proc { |v| STATES[v.to_sym] } do |parent|
-    parent.table[:state]
-  end
-
-  # Single Order can produce multiple Trades with different fee types (maker and taker).
-  # Since we can't predict fee types on order creation step and
-  # Market fees configuration can change we need to store fees on Order creation.
-  after_validation(on: :create, if: ->(o) { o.errors.blank? }) do
-    trading_fee = TradingFee.for(group: member.group, market_id: market_id)
-    self.maker_fee = trading_fee.maker
-    self.taker_fee = trading_fee.taker
-  end
+  before_validation(on: :create) { self.fee = market.public_send("#{kind}_fee") }
 
   after_commit on: :create do
     next unless ord_type == 'limit'
@@ -130,24 +107,6 @@ class Order < ApplicationRecord
         order.update!(state: ::Order::CANCEL)
       end
     end
-
-    def to_csv
-      attributes = %w[id market_id ord_type side price volume origin_volume avg_price trades_count state created_at updated_at]
-
-      CSV.generate(headers: true) do |csv|
-        csv << attributes
-
-        all.each do |order|
-          data = attributes[0...-2].map { |attr| order.send(attr) }
-          data += attributes[-2..-1].map { |attr| order.send(attr).iso8601 }
-          csv << data
-        end
-      end
-    end
-  end
-
-  def trades
-    Trade.where('maker_order_id = ? OR taker_order_id = ?', id, id)
   end
 
   def funds_used
@@ -213,8 +172,7 @@ class Order < ApplicationRecord
       volume:        volume,
       origin_volume: origin_volume,
       market_id:     market_id,
-      maker_fee:     maker_fee,
-      taker_fee:     taker_fee,
+      fee:           fee,
       locked:        locked,
       state:         read_attribute_before_type_cast(:state) }
   end
@@ -290,7 +248,7 @@ class Order < ApplicationRecord
 end
 
 # == Schema Information
-# Schema version: 20190813121822
+# Schema version: 20190213104708
 #
 # Table name: orders
 #
@@ -301,8 +259,7 @@ end
 #  price          :decimal(32, 16)
 #  volume         :decimal(32, 16)  not null
 #  origin_volume  :decimal(32, 16)  not null
-#  maker_fee      :decimal(17, 16)  default(0.0), not null
-#  taker_fee      :decimal(17, 16)  default(0.0), not null
+#  fee            :decimal(32, 16)  default(0.0), not null
 #  state          :integer          not null
 #  type           :string(8)        not null
 #  member_id      :integer          not null

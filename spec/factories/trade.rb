@@ -5,30 +5,32 @@ FactoryBot.define do
   factory :trade do
     trait :btcusd do
       price { '10.0'.to_d }
-      amount { '1.0'.to_d }
-      total { price.to_d * amount.to_d }
+      volume { '1.0'.to_d }
+      funds { price.to_d * volume.to_d }
       market { Market.find(:btcusd) }
-      maker_order { create(:order_ask, :btcusd) }
-      taker_order { create(:order_bid, :btcusd) }
-      maker { maker_order.member }
-      taker { taker_order.member }
+      ask { create(:order_ask, :btcusd) }
+      bid { create(:order_bid, :btcusd) }
+      ask_member { ask.member }
+      bid_member { bid.member }
+      trend { %w[up down].sample }
     end
 
     trait :btceth do
       price { '10.0'.to_d }
-      amount { '1.0'.to_d }
-      total { price.to_d * amount.to_d }
+      volume { '1.0'.to_d }
+      funds { price.to_d * volume.to_d }
       market { Market.find(:btceth) }
-      maker_order { create(:order_ask, :btceth) }
-      taker_order { create(:order_bid, :btceth) }
-      maker { maker_order.member }
-      taker { taker_order.member }
+      ask { create(:order_ask, :btceth) }
+      bid { create(:order_bid, :btceth) }
+      ask_member { ask.member }
+      bid_member { bid.member }
+      trend { %w[up down].sample }
     end
 
     # Create liability history for orders by passing with_deposit_liability trait.
     trait :with_deposit_liability do
-      maker_order { create(:order_ask, :with_deposit_liability) }
-      taker_order { create(:order_bid, :with_deposit_liability) }
+      ask { create(:order_ask, :with_deposit_liability) }
+      bid { create(:order_bid, :with_deposit_liability) }
     end
   end
 end

@@ -64,20 +64,6 @@ describe API::V2::Account::Deposits, type: :request do
       expect(result.first['txid']).to eq d.txid
     end
 
-    it 'filters deposits by multiple states' do
-      create(:deposit_btc, member: member, aasm_state: :rejected)
-      api_get '/api/v2/account/deposits', params: { state: ['canceled', 'rejected'] }, token: token
-      result = JSON.parse(response.body)
-
-      expect(result.size).to eq 1
-
-      create(:deposit_btc, member: member, aasm_state: :canceled)
-      api_get '/api/v2/account/deposits', params: { state: ['canceled', 'rejected'] }, token: token
-      result = JSON.parse(response.body)
-
-      expect(result.size).to eq 2
-    end
-
     it 'returns deposits for currency usd' do
       api_get '/api/v2/account/deposits', params: { currency: 'usd' }, token: token
       result = JSON.parse(response.body)
@@ -168,18 +154,6 @@ describe API::V2::Account::Deposits, type: :request do
       xit 'return legacy address' do
         api_get "/api/v2/account/deposit_address/#{currency}", params: { address_format: 'legacy'}, token: token
         expect(response.body).to eq '{"currency":"bch","address":"2N2wNXrdo4oEngp498XGnGCbru29MycHogR"}'
-      end
-    end
-
-    context 'disabled deposit for currency' do
-      let(:currency) { :btc }
-
-      before { Currency.find(currency).update!(deposit_enabled: false) }
-
-      it 'returns error' do
-        api_get "/api/v2/account/deposit_address/#{currency}", token: token
-        expect(response).to have_http_status 422
-        expect(response).to include_api_error('account.currency.deposit_disabled')
       end
     end
   end

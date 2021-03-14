@@ -17,7 +17,7 @@
         params do
           optional :currency,
                    type: String,
-                   values: { value: -> { Currency.visible.codes(bothcase: true) }, message: 'account.transactions.currency_doesnt_exist' },
+                   values: { value: -> { Currency.enabled.codes(bothcase: true) }, message: 'account.transactions.currency_doesnt_exist' },
                    desc: 'Currency code'
 
           optional :order_by,
@@ -51,13 +51,11 @@
 
         end
         get "/transactions" do
-          sql = "SELECT * FROM " \
-                "(SELECT d.id, currency_id, amount, fee, address, aasm_state, NULL AS note, txid, d.updated_at, d.type, b.height - block_number AS confirmations FROM deposits d " \
-                "INNER JOIN currencies c ON c.id=d.currency_id LEFT JOIN blockchains b ON b.key=c.blockchain_key WHERE member_id=#{current_user.id} " \
-                "UNION " \
-                "SELECT w.id, currency_id, amount, fee, rid, aasm_state, note, txid, w.updated_at, w.type, b.height - block_number AS confirmations FROM withdraws w " \
-                "INNER JOIN currencies c ON c.id=w.currency_id LEFT JOIN blockchains b ON b.key=c.blockchain_key WHERE member_id=#{current_user.id}) " \
-                "AS transactions ORDER BY updated_at #{params[:order_by].upcase}"
+          sql = "SELECT * FROM \
+                (SELECT currency_id, amount, fee, address, aasm_state, NULL AS note, txid, updated_at, type FROM deposits WHERE member_id=#{current_user.id} \
+                UNION \
+                SELECT currency_id, amount, fee, rid, aasm_state, note, txid, updated_at, type FROM withdraws WHERE member_id=#{current_user.id}) \
+                AS transactions  ORDER BY updated_at #{params[:order_by].upcase}"
 
           result = ActiveRecord::Base.connection.exec_query(sql).to_hash
 

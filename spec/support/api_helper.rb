@@ -31,14 +31,6 @@ module APITestHelpers
     api_request(:post, *args)
   end
 
-  def api_put(*args)
-    api_request(:put, *args)
-  end
-
-  def api_patch(*args)
-    api_request(:patch, *args)
-  end
-
   def api_delete(*args)
     api_request(:delete, *args)
   end
@@ -119,13 +111,6 @@ module APITestHelpers
     end
 
     Rails.configuration.x.security_configuration = config
-  end
-
-  # TODO: Improvements:
-  #   - ability to use both symbol and string keys;
-  #   - handle nil response body;
-  def response_body
-    JSON.parse(response.body)
   end
 end
 

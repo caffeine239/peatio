@@ -53,15 +53,12 @@ describe Matching::Engine do
           [
             :trade_executor,
             {
-              :action => "execute",
-              :trade => {
-                :market_id=>"btcusd",
-                :maker_order_id=>bid1_in_db.id,
-                :taker_order_id=>ask1_in_db.id,
-                :strike_price=>0.86.to_d,
-                :amount=>0.918.to_d,
-                :total=>0.78948.to_d
-              }
+              :market_id=>"btcusd",
+              :ask_id=>ask1_in_db.id,
+              :bid_id=>bid1_in_db.id,
+              :strike_price=>0.86.to_d,
+              :volume=>0.918.to_d,
+              :funds=>0.78948.to_d
             },
             { persistent: false }
           ]
@@ -105,15 +102,12 @@ describe Matching::Engine do
           [
             :trade_executor,
             {
-              :action => "execute",
-              :trade => {
-                :market_id=>"btcusd",
-                :taker_order_id=>ask1_in_db.id,
-                :maker_order_id=>bid1_in_db.id,
-                :strike_price=>8.6.to_d,
-                :amount=>0.918.to_d,
-                :total=>7.8948.to_d
-              }
+              :market_id=>"btcusd",
+              :ask_id=>ask1_in_db.id,
+              :bid_id=>bid1_in_db.id,
+              :strike_price=>8.6.to_d,
+              :volume=>0.918.to_d,
+              :funds=>7.8948.to_d
             },
             { persistent: false }
           ]
@@ -155,7 +149,7 @@ describe Matching::Engine do
       let(:expected_messages) do
         [
           [
-            :trade_executor,
+            :order_processor,
             {
               :action=>"cancel",
               :order=>
@@ -218,20 +212,17 @@ describe Matching::Engine do
           [
             :trade_executor,
             {
-              :action => "execute",
-              :trade => {
-                :market_id=>"btcusd",
-                :maker_order_id=>ask1_in_db.id,
-                :taker_order_id=>bid1_in_db.id,
-                :strike_price=>80.06.to_d,
-                :amount=>0.0111.to_d,
-                :total=>0.888666.to_d
-              }
+              :market_id=>"btcusd",
+              :ask_id=>ask1_in_db.id,
+              :bid_id=>bid1_in_db.id,
+              :strike_price=>80.06.to_d,
+              :volume=>0.0111.to_d,
+              :funds=>0.888666.to_d
             },
             { persistent: false }
           ],
           [
-            :trade_executor,
+            :order_processor,
             {
               :action=>"cancel",
               :order=>
@@ -303,32 +294,26 @@ describe Matching::Engine do
         [
           [
             :trade_executor,
-            { :action => "execute",
-              :trade => {
-                :market_id=>"btcusd",
-                :maker_order_id=>ask1_in_db.id,
-                :taker_order_id=>bid1_in_db.id,
-                :strike_price=>0.3e4,
-                :amount=>0.9e-3,
-                :total=>0.27e1
-            }},
+            { :market_id=>"btcusd",
+              :ask_id=>ask1_in_db.id,
+              :bid_id=>bid1_in_db.id,
+              :strike_price=>0.3e4,
+              :volume=>0.9e-3,
+              :funds=>0.27e1 },
             { :persistent=>false }
           ],
           [
             :trade_executor,
-            { :action => "execute",
-              :trade => {
-                :market_id=>"btcusd",
-                :maker_order_id=>ask2_in_db.id,
-                :taker_order_id=>bid1_in_db.id,
-                :strike_price=>0.3001e4,
-                :amount=>0.11e-2,
-                :total=>0.33011e1
-            }},
+            { :market_id=>"btcusd",
+              :ask_id=>ask2_in_db.id,
+              :bid_id=>bid1_in_db.id,
+              :strike_price=>0.3001e4,
+              :volume=>0.11e-2,
+              :funds=>0.33011e1 },
             { :persistent=>false }
           ],
           [
-            :trade_executor,
+            :order_processor,
             { :action=>"cancel",
               :order=> {
                 :id=>bid1_in_db.id,
@@ -338,7 +323,7 @@ describe Matching::Engine do
                 :volume=>0.8e-2,
                 :market=>"btcusd",
                 :ord_type=>"market"
-            }},
+              }},
             { :persistent=>false }
           ]
         ]
@@ -381,19 +366,18 @@ describe Matching::Engine do
         [
           [
             :trade_executor,
-            { :action => "execute",
-              :trade => {
-                :market_id=>"btcusd",
-                :maker_order_id=>ask1_in_db.id,
-                :taker_order_id=>bid1_in_db.id,
-                :strike_price=>0.3e4,
-                :amount=>0.9e-3,
-                :total=>0.27e1
-            }},
+            {
+              :market_id=>"btcusd",
+              :ask_id=>ask1_in_db.id,
+              :bid_id=>bid1_in_db.id,
+              :strike_price=>0.3e4,
+              :volume=>0.9e-3,
+              :funds=>0.27e1
+            },
             { :persistent=>false }
           ],
           [
-            :trade_executor,
+            :order_processor,
             {
               :action=>"cancel",
               :order=> {
@@ -456,34 +440,30 @@ describe Matching::Engine do
         [
           [
             :trade_executor,
-            { :action => "execute",
-              :trade => {
-                :market_id => "btcusd",
-                :maker_order_id => ask1_in_db.id,
-                :taker_order_id => bid1_in_db.id,
-                :strike_price => 0.3e4.to_d,
-                :amount => 0.45e-3.to_d,
-                :total => 0.135e1.to_d
-            }},
-            { :persistent => false }
-          ],
-          [
-            :trade_executor,
             {
-              :action => "execute",
-              :trade => {
-                :market_id => "btcusd",
-                :maker_order_id => ask1_in_db.id,
-                :taker_order_id => bid2_in_db.id,
-                :strike_price => 0.3e4.to_d,
-                :amount => 0.45e-3.to_d,
-                :total => 0.135e1.to_d
-              }
+              :market_id => "btcusd",
+              :ask_id => ask1_in_db.id,
+              :bid_id => bid1_in_db.id,
+              :strike_price => 0.3e4.to_d,
+              :volume => 0.45e-3.to_d,
+              :funds => 0.135e1.to_d
             },
             { :persistent => false }
           ],
           [
             :trade_executor,
+            {
+              :market_id => "btcusd",
+              :ask_id => ask1_in_db.id,
+              :bid_id => bid2_in_db.id,
+              :strike_price => 0.3e4.to_d,
+              :volume => 0.45e-3.to_d,
+              :funds => 0.135e1.to_d
+            },
+            { :persistent => false }
+          ],
+          [
+            :order_processor,
             {
               :action => "cancel",
               :order => {
@@ -518,9 +498,9 @@ describe Matching::Engine do
     it 'should fill the market order completely' do
       mo = Matching.mock_market_order(type: :bid, locked: '6.0'.to_d, volume: '2.4'.to_d)
 
-      AMQPQueue.expects(:enqueue).with(:trade_executor, { action: "execute", trade: { market_id: market.id, maker_order_id: ask1.id, taker_order_id: mo.id, strike_price: ask1.price, amount: ask1.volume, total: '1.0'.to_d } }, anything)
-      AMQPQueue.expects(:enqueue).with(:trade_executor, { action: "execute", trade: { market_id: market.id, maker_order_id: ask2.id, taker_order_id: mo.id, strike_price: ask2.price, amount: ask2.volume, total: '2.0'.to_d } }, anything)
-      AMQPQueue.expects(:enqueue).with(:trade_executor, { action: "execute", trade: { market_id: market.id, maker_order_id: ask3.id, taker_order_id: mo.id, strike_price: ask3.price, amount: '0.4'.to_d, total: '1.2'.to_d } }, anything)
+      AMQPQueue.expects(:enqueue).with(:trade_executor, { market_id: market.id, ask_id: ask1.id, bid_id: mo.id, strike_price: ask1.price, volume: ask1.volume, funds: '1.0'.to_d }, anything)
+      AMQPQueue.expects(:enqueue).with(:trade_executor, { market_id: market.id, ask_id: ask2.id, bid_id: mo.id, strike_price: ask2.price, volume: ask2.volume, funds: '2.0'.to_d }, anything)
+      AMQPQueue.expects(:enqueue).with(:trade_executor, { market_id: market.id, ask_id: ask3.id, bid_id: mo.id, strike_price: ask3.price, volume: '0.4'.to_d, funds: '1.2'.to_d }, anything)
 
       subject.submit bid
       subject.submit ask1
@@ -538,9 +518,9 @@ describe Matching::Engine do
     it 'should fill the market order partially and cancel it' do
       mo = Matching.mock_market_order(type: :bid, locked: '6.0'.to_d, volume: '2.4'.to_d)
 
-      AMQPQueue.expects(:enqueue).with(:trade_executor, { action: "execute", trade: { market_id: market.id, maker_order_id: ask1.id, taker_order_id: mo.id, strike_price: ask1.price, amount: ask1.volume, total: '1.0'.to_d } }, anything)
-      AMQPQueue.expects(:enqueue).with(:trade_executor, { action: "execute", trade: { market_id: market.id, maker_order_id: ask2.id, taker_order_id: mo.id, strike_price: ask2.price, amount: ask2.volume, total: '2.0'.to_d } }, anything)
-      AMQPQueue.expects(:enqueue).with(:trade_executor, has_entries(action: 'cancel', order: has_entry(id: mo.id)), anything)
+      AMQPQueue.expects(:enqueue).with(:trade_executor, { market_id: market.id, ask_id: ask1.id, bid_id: mo.id, strike_price: ask1.price, volume: ask1.volume, funds: '1.0'.to_d }, anything)
+      AMQPQueue.expects(:enqueue).with(:trade_executor, { market_id: market.id, ask_id: ask2.id, bid_id: mo.id, strike_price: ask2.price, volume: ask2.volume, funds: '2.0'.to_d }, anything)
+      AMQPQueue.expects(:enqueue).with(:order_processor, has_entries(action: 'cancel', order: has_entry(id: mo.id)), anything)
 
       subject.submit bid
       subject.submit ask1
@@ -556,7 +536,7 @@ describe Matching::Engine do
     context 'fully match incoming order' do
       it 'should execute trade' do
         AMQPQueue.expects(:enqueue)
-                 .with(:trade_executor, { action: "execute", trade: { market_id: market.id, maker_order_id: ask.id, taker_order_id: bid.id, strike_price: price, amount: volume, total: '50.0'.to_d } }, anything)
+                 .with(:trade_executor, { market_id: market.id, ask_id: ask.id, bid_id: bid.id, strike_price: price, volume: volume, funds: '50.0'.to_d }, anything)
 
         subject.submit(ask)
         subject.submit(bid)
@@ -571,7 +551,7 @@ describe Matching::Engine do
 
       it 'should execute trade' do
         AMQPQueue.expects(:enqueue)
-                 .with(:trade_executor, { action: "execute", trade: { market_id: market.id, maker_order_id: ask.id, taker_order_id: bid.id, strike_price: price, amount: 3.to_d, total: '30.0'.to_d } }, anything)
+                 .with(:trade_executor, { market_id: market.id, ask_id: ask.id, bid_id: bid.id, strike_price: price, volume: 3.to_d, funds: '30.0'.to_d }, anything)
 
         subject.submit(ask)
         subject.submit(bid)
@@ -580,7 +560,7 @@ describe Matching::Engine do
         expect(subject.bid_orders.limit_orders).not_to be_empty
 
         AMQPQueue.expects(:enqueue)
-                 .with(:trade_executor, { action: 'cancel', order: bid.attributes }, anything)
+                 .with(:order_processor, { action: 'cancel', order: bid.attributes }, anything)
         subject.cancel(bid)
         expect(subject.bid_orders.limit_orders).to be_empty
       end
@@ -617,7 +597,7 @@ describe Matching::Engine do
         subject.cancel(low_ask) # but it's canceled
 
         AMQPQueue.expects(:enqueue)
-                 .with(:trade_executor, { action: "execute", trade: { market_id: market.id, maker_order_id: high_ask.id, taker_order_id: bid.id, strike_price: high_ask.price, amount: high_ask.volume, total: '30.0'.to_d } }, anything)
+                 .with(:trade_executor, { market_id: market.id, ask_id: high_ask.id, bid_id: bid.id, strike_price: high_ask.price, volume: high_ask.volume, funds: '30.0'.to_d }, anything)
         subject.submit(bid)
 
         expect(subject.ask_orders.limit_orders).to be_empty
@@ -651,7 +631,7 @@ describe Matching::Engine do
       expect(subject.bid_orders.limit_orders).to be_empty
 
       expect(subject.queue.size).to eq 1
-      expect(subject.queue.first).to eq [:trade_executor, { action: "execute", trade: { market_id: market.id, maker_order_id: ask.id, taker_order_id: bid.id, strike_price: price, amount: volume, total: '50.0'.to_d } }, { persistent: false }]
+      expect(subject.queue.first).to eq [:trade_executor, { market_id: market.id, ask_id: ask.id, bid_id: bid.id, strike_price: price, volume: volume, funds: '50.0'.to_d }, { persistent: false }]
     end
   end
 end

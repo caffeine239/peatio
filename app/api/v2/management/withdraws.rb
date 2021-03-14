@@ -73,7 +73,7 @@ module API
                       'will validate withdraw later against suspected activity, and assign state to «rejected» or «accepted». ' \
                       'The processing will not begin automatically. The processing may be initiated manually from admin panel or by PUT /management_api/v1/withdraws/action. ' \
                 'Coin: money are immediately locked, withdraw state is set to «submitted», system workers ' \
-                      'will validate withdraw later against suspected activity, validate withdraw address and ' \
+                      'will validate withdraw later against suspected activity, validate withdraw address and '
                       'set state to «rejected» or «accepted». ' \
                       'Then in case state is «accepted» withdraw workers will perform interactions with blockchain. ' \
                       'The withdraw receives new state «processing». Then withdraw receives state either «confirming» or «failed».' \
@@ -82,48 +82,28 @@ module API
           success API::V2::Management::Entities::Withdraw
         end
         params do
-          requires :uid,            type: String, desc: 'The shared user ID.'
-          optional :tid,            type: String, desc: 'The shared transaction ID. Must not exceed 64 characters. Peatio will generate one automatically unless supplied.'
-          optional :rid,            type: String, desc: 'The beneficiary ID or wallet address on the Blockchain.'
-          optional :beneficiary_id, type: String, desc: 'ID of Active Beneficiary belonging to user.'
-          requires :currency,       type: String, values: -> { Currency.codes(bothcase: true) }, desc: 'The currency code.'
-          requires :amount,         type: BigDecimal, desc: 'The amount to withdraw.'
-          optional :note,           type: String, desc: 'The note for withdraw.'
-          optional :action,         type: String, values: %w[process], desc: 'The action to perform.'
-
-          exactly_one_of :rid, :beneficiary_id
+          requires :uid,      type: String, desc: 'The shared user ID.'
+          optional :tid,      type: String, desc: 'The shared transaction ID. Must not exceed 64 characters. Peatio will generate one automatically unless supplied.'
+          requires :rid,      type: String, desc: 'The beneficiary ID or wallet address on the Blockchain.'
+          requires :currency, type: String, values: -> { Currency.codes(bothcase: true) }, desc: 'The currency code.'
+          requires :amount,   type: BigDecimal, desc: 'The amount to withdraw.'
+          optional :action,   type: String, values: %w[process], desc: 'The action to perform.'
         end
         post '/withdraws/new' do
-          member = Member.find_by(uid: params[:uid])
-
           currency = Currency.find(params[:currency])
-          unless currency.withdrawal_enabled?
-            error!({ errors: ['management.currency.withdrawal_disabled'] }, 422)
-          end
-
-          beneficiary = Beneficiary.find_by(id: params[:beneficiary_id]) if params[:beneficiary_id].present?
-          if params[:rid].blank? && beneficiary.blank?
-            error!({ errors: ['management.beneficiary.doesnt_exist'] }, 422)
-          elsif params[:rid].blank? && !beneficiary&.active?
-            error!({ errors: ['management.beneficiary.invalid_state_for_withdrawal'] }, 422)
-          end
-
-          declared_params = declared(params, include_missing: false).slice(:tid, :rid, :note).merge(
-            sum: params[:amount],
-            member: member,
-            currency: currency,
-            tid: params[:tid]
-          )
-
-          declared_params.merge!(beneficiary: beneficiary) if params[:beneficiary_id].present?
-          withdraw = "withdraws/#{currency.type}".camelize.constantize.new(declared_params)
-
+          member   = Member.find_by(uid: params[:uid])
+          withdraw = "withdraws/#{currency.type}".camelize.constantize.new \
+            sum:            params[:amount],
+            member:         member,
+            currency:       currency,
+            tid:            params[:tid],
+            rid:            params[:rid]
           withdraw.save!
           withdraw.with_lock { withdraw.submit! }
           perform_action(withdraw, params[:action]) if params[:action]
           present withdraw, with: API::V2::Management::Entities::Withdraw
         rescue ::Account::AccountError => e
-          report_api_error(e, request)
+          report_exception_to_screen(e)
           error!({ errors: [e.to_s] }, 422)
         rescue => e
           report_exception(e)

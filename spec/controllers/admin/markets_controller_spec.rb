@@ -6,8 +6,10 @@ describe Admin::MarketsController, type: :controller do
   before(:each) { inject_authorization!(member) }
   let :attributes do
     { quote_currency:     'usd',
+      base_currency_fee:  '0.003'.to_d,
       price_precision:    4,
       base_currency:      'eth',
+      quote_currency_fee: '0.02'.to_d,
       min_amount:         '0.02'.to_d,
       min_price:          '0.02'.to_d,
       amount_precision:   4,
@@ -41,8 +43,10 @@ describe Admin::MarketsController, type: :controller do
   describe '#update' do
     let :new_attributes do
       { quote_currency:         'btc',
+        bid_fee:          '0.002'.to_d,
         price_precision:    7,
         base_currency:         'eth',
+        ask_fee:          '0.05'.to_d,
         min_amount:       '0.02'.to_d,
         amount_precision: 7,
         state:            :disabled,

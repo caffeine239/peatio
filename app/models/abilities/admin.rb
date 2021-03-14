@@ -6,9 +6,9 @@ module Abilities
     include CanCan::Ability
 
     def initialize
-      can %i[read update], Order
+      can :read, Order
       can :read, Trade
-      can %i[read update], Member
+      can :read, Member
 
       can :manage, Deposit
       can :manage, Withdraw
@@ -23,8 +23,6 @@ module Abilities
       can :manage, Currency
       can :manage, Blockchain
       can :manage, Wallet
-      can :manage, TradingFee
-      can :manage, Adjustment
 
       can :read, Account
       can :read, PaymentAddress

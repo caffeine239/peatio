@@ -81,11 +81,11 @@ module Matching
           break
         end
 
-        price, amount, total = trade
-        validate_trade!(price, amount, total)
+        price, volume, funds = trade
+        validate_trade!(price, volume, funds)
 
-        order.fill(price, amount, total)
-        opposite_book.fill_top(price, amount, total)
+        order.fill(price, volume, funds)
+        opposite_book.fill_top(price, volume, funds)
 
         # Publish message to trade_executor with matched trade.
         publish(order, opposite_order, trade)
@@ -124,46 +124,45 @@ module Matching
     private
 
     def publish(order, counter_order, trade)
-      maker_order, taker_order = order.id < counter_order.id ? [order, counter_order] : [counter_order, order]
-      # Rounding is forbidden in this step because it can cause difference
-      # between amount/total in DB and orderbook.
-      price  = trade[0]
-      amount = trade[1]
-      total  = trade[2]
+      ask, bid = order.type == :ask ? [order, counter_order] : [counter_order, order]
 
-      Rails.logger.info { "[#{@market.id}] new trade - maker_order: #{maker_order.label} taker_order: #{taker_order.label} price: #{price} amount: #{amount} total: #{total}" }
+      # Rounding is forbidden in this step because it can cause difference
+      # between amount/funds in DB and orderbook.
+      price  = trade[0]
+      volume = trade[1]
+      funds  = trade[2]
+
+      Rails.logger.info { "[#{@market.id}] new trade - ask: #{ask.label} bid: #{bid.label} price: #{price} volume: #{volume} funds: #{funds}" }
 
       @queue.enqueue(:trade_executor,
-                     { action: 'execute',
-                       trade: {
-                         market_id: @market.id,
-                         maker_order_id: maker_order.id,
-                         taker_order_id: taker_order.id,
-                         strike_price: price,
-                         amount: amount,
-                         total: total } },
+                     { market_id: @market.id,
+                       ask_id: ask.id,
+                       bid_id: bid.id,
+                       strike_price: price,
+                       volume: volume,
+                       funds: funds },
                      { persistent: false })
     end
 
     def publish_cancel(order)
-      @queue.enqueue(:trade_executor,
+      @queue.enqueue(:order_processor,
                      { action: 'cancel', order: order.attributes },
                      { persistent: false })
     end
 
-    def validate_trade!(price, amount, total)
+    def validate_trade!(price, volume, funds)
       message =
-        if [price, amount, total].any? { |d| d == ZERO }
-          'price, amount or total is equal to 0.'
-        elsif price * amount != total
-          'price * amount != total'
-        elsif round(price * amount) != round(total)
-          'round(price * amount) != round(total)'
+        if [price, volume, funds].any? { |d| d == ZERO }
+          'price, volume or funds is equal to 0.'
+        elsif price * volume != funds
+          'price * volume != funds'
+        elsif round(price * volume) != round(funds)
+          'round(price * volume) != round(funds)'
         end
 
       return if message.blank?
 
-      TradeStruct.new(price, amount, total).tap do |t|
+      TradeStruct.new(price, volume, funds).tap do |t|
         raise TradeError.new(t, message)
       end
     end
