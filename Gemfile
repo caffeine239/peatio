@@ -4,12 +4,14 @@
 source 'https://rubygems.org'
 git_source(:github) { |repo_slug| "https://github.com/#{repo_slug}" }
 
-ruby '2.6.2'
+ruby '2.6.5'
 
+gem 'ransack', '~> 2.1.1'
 gem 'rails', '~> 5.2.3'
 gem 'puma', '~> 3.12.0'
 gem 'mysql2', '~> 0.5.2'
-gem 'redis-rails', '~> 5.0.2'
+gem 'redis', '~> 4.1.2', require: ['redis', 'redis/connection/hiredis']
+gem 'hiredis', '~> 0.6.0'
 gem 'jbuilder', '~> 2.7.0'
 gem 'figaro', '~> 1.1.1'
 gem 'hashie', '~> 3.6.0'
@@ -18,11 +20,10 @@ gem 'bunny', '~> 2.14.1'
 gem 'cancancan', '~> 2.3.0'
 gem 'enumerize', '~> 2.2.2'
 gem 'kaminari', '~> 1.1.1'
-gem 'api-pagination', '~> 4.8.2'
-gem 'sassc-rails', '~> 2.1.0'
+gem 'sassc-rails', '~> 2.1.2'
 gem 'coffee-rails', '~> 4.2.2'
 gem 'uglifier', '~> 4.1.20'
-gem 'jquery-rails', '~> 4.3.3'
+gem 'jquery-rails', '~> 4.3.5'
 gem 'bootstrap', '~> 4.3.1'
 gem 'font-awesome-sass', '~> 5.6.1'
 gem 'rbtree', '~> 0.4.2'
@@ -46,17 +47,18 @@ gem 'arel-is-blank', '~> 1.0.0'
 gem 'sentry-raven', '~> 2.9.0', require: false
 gem 'memoist', '~> 0.16.0'
 gem 'method-not-implemented', '~> 1.0.1'
-gem 'passgen', '~> 1.0.2'
 gem 'validates_lengths_from_database', '~> 0.7.0'
 gem 'jwt-multisig', '~> 1.0.0'
 gem 'cash-addr', '~> 0.2.0', require: 'cash_addr'
 gem 'digest-sha3', '~> 1.1.0'
 gem 'scout_apm', '~> 2.4', require: false
-gem 'peatio', '~> 0.6.1'
+gem 'peatio', '~> 0.6.3'
 gem 'rack-cors', '~> 1.0.2', require: false
 gem 'env-tweaks', '~> 1.0.0'
 gem 'vault', '~> 0.12', require: false
+gem 'vault-rails', git: 'http://github.com/rubykube/vault-rails'
 gem 'bootsnap', '>= 1.1.0', require: false
+gem 'net-http-persistent', '~> 3.0.1'
 
 group :development, :test do
   gem 'bump',         '~> 0.7'
@@ -73,12 +75,12 @@ group :development do
 end
 
 group :test do
-  gem 'rspec-rails',         '~> 3.8'
+  gem 'rspec-rails', '~> 3.8', '>= 3.8.2'
   gem 'rspec-retry',         '~> 0.6'
   gem 'webmock',             '~> 3.5'
   gem 'database_cleaner',    '~> 1.7'
   gem 'mocha',               '~> 1.8', require: false
-  gem 'factory_bot_rails',   '~> 5.0'
+  gem 'factory_bot_rails', '~> 5.0', '>= 5.0.2'
   gem 'timecop',             '~> 0.9'
   gem 'rubocop-rspec',       '~> 1.32', require: false
 end

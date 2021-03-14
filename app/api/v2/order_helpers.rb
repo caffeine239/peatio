@@ -32,14 +32,19 @@ module API
         order = build_order(attrs)
         submit_order(order)
         order
+        # TODO: Make more specific error message for ActiveRecord::RecordInvalid.
       rescue => e
+        if create_order_errors.include?(e.class)
+          report_api_error(e, request)
+        else
+          report_exception(e)
+        end
+
         message = create_order_errors.fetch(e.class, 'market.order.create_error')
-        report_exception_to_screen(e)
         error!({ errors: [message] }, 422)
       end
 
       def submit_order(order)
-        order.fix_number_precision # number must be fixed before computing locked
         order.locked = order.origin_locked = order.compute_locked
         raise ::Account::AccountError unless check_balance(order)
 

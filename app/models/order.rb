@@ -1,6 +1,8 @@
 # encoding: UTF-8
 # frozen_string_literal: true
 
+require 'csv'
+
 class Order < ApplicationRecord
   include BelongsToMarket
   include BelongsToMember
@@ -15,13 +17,44 @@ class Order < ApplicationRecord
   TYPES = %w[ market limit ]
   enumerize :ord_type, in: TYPES, scope: true
 
+  belongs_to :ask_currency, class_name: 'Currency', foreign_key: :ask
+  belongs_to :bid_currency, class_name: 'Currency', foreign_key: :bid
   after_commit :trigger_pusher_event
-  before_validation :fix_number_precision, on: :create
 
   validates :ord_type, :volume, :origin_volume, :locked, :origin_locked, presence: true
   validates :price, numericality: { greater_than: 0 }, if: ->(order) { order.ord_type == 'limit' }
-  validates :origin_volume, numericality: { greater_than: 0 }
+
+  validates :origin_volume,
+            numericality: { greater_than: 0, greater_than_or_equal_to: ->(order){ order.market.min_amount } },
+            on: :create
+
+  validates :origin_volume, precision: { less_than_or_eq_to: ->(o) { o.market.amount_precision } },
+                            if: ->(o) { o.origin_volume.present? }, on: :create
+
   validate  :market_order_validations, if: ->(order) { order.ord_type == 'market' }
+
+  validates :price, presence: true, if: :is_limit_order?
+
+  validates :price, precision: { less_than_or_eq_to: ->(o) { o.market.price_precision } },
+                    if: ->(o) { o.price.present? }, on: :create
+
+  validates :price,
+            numericality: { less_than_or_equal_to: ->(order){ order.market.max_price }},
+            if: ->(order) { order.is_limit_order? && order.market.max_price.nonzero? },
+            on: :create
+
+  validates :price,
+            numericality: { greater_than_or_equal_to: ->(order){ order.market.min_price }},
+            if: :is_limit_order?, on: :create
+
+  attr_readonly :member_id,
+                :bid,
+                :ask,
+                :market_id,
+                :ord_type,
+                :origin_volume,
+                :origin_locked,
+                :created_at
 
   PENDING = 'pending'
   WAIT    = 'wait'
@@ -32,7 +65,20 @@ class Order < ApplicationRecord
   scope :done, -> { with_state(:done) }
   scope :active, -> { with_state(:wait) }
 
-  before_validation(on: :create) { self.fee = config.public_send("#{kind}_fee") }
+  # Custom ransackers.
+
+  ransacker :state, formatter: proc { |v| STATES[v.to_sym] } do |parent|
+    parent.table[:state]
+  end
+
+  # Single Order can produce multiple Trades with different fee types (maker and taker).
+  # Since we can't predict fee types on order creation step and
+  # Market fees configuration can change we need to store fees on Order creation.
+  after_validation(on: :create, if: ->(o) { o.errors.blank? }) do
+    trading_fee = TradingFee.for(group: member.group, market_id: market_id)
+    self.maker_fee = trading_fee.maker
+    self.taker_fee = trading_fee.taker
+  end
 
   after_commit on: :create do
     next unless ord_type == 'limit'
@@ -69,7 +115,8 @@ class Order < ApplicationRecord
     rescue => e
       order = find_by_id!(id)
       order.update!(state: ::Order::REJECT) if order
-      report_exception_to_screen(e)
+
+      raise e
     end
 
     def cancel(id)
@@ -82,38 +129,63 @@ class Order < ApplicationRecord
 
         order.update!(state: ::Order::CANCEL)
       end
-    rescue => e
-      report_exception_to_screen(e)
     end
+
+    def to_csv
+      attributes = %w[id market_id ord_type side price volume origin_volume avg_price trades_count state created_at updated_at]
+
+      CSV.generate(headers: true) do |csv|
+        csv << attributes
+
+        all.each do |order|
+          data = attributes[0...-2].map { |attr| order.send(attr) }
+          data += attributes[-2..-1].map { |attr| order.send(attr).iso8601 }
+          csv << data
+        end
+      end
+    end
+  end
+
+  def trades
+    Trade.where('maker_order_id = ? OR taker_order_id = ?', id, id)
   end
 
   def funds_used
     origin_locked - locked
   end
 
-  def config
-    market
-  end
-
   def trigger_pusher_event
     # skip market type orders, they should not appear on trading-ui
-    return if ord_type != 'limit'
+    return unless ord_type == 'limit' || state == 'done'
 
     Member.trigger_pusher_event member_id, :order, \
       id:               id,
-      at:               at,
       market:           market_id,
       kind:             kind,
+      side:             side,
+      ord_type:         ord_type,
       price:            price&.to_s('F'),
+      avg_price:        avg_price&.to_s('F'),
       state:            state,
+      origin_volume:    origin_volume.to_s('F'),
       remaining_volume: volume.to_s('F'),
-      origin_volume:    origin_volume.to_s('F')
+      executed_volume:  (origin_volume - volume).to_s('F'),
+      at:               at,
+      created_at:       created_at.to_i,
+      updated_at:       updated_at.to_i,
+      trades_count:     trades_count
   end
 
+  def side
+    self.class.name.underscore[-3, 3] == 'ask' ? 'sell' : 'buy'
+  end
+
+  # @deprecated Please use {#side} instead
   def kind
     self.class.name.underscore[-3, 3]
   end
 
+  # @deprecated Please use {#created_at} instead
   def at
     created_at.to_i
   end
@@ -141,17 +213,19 @@ class Order < ApplicationRecord
       volume:        volume,
       origin_volume: origin_volume,
       market_id:     market_id,
-      fee:           fee,
+      maker_fee:     maker_fee,
+      taker_fee:     taker_fee,
       locked:        locked,
       state:         read_attribute_before_type_cast(:state) }
   end
 
-  def fix_number_precision
-    self.price = config.fix_number_precision(:bid, price.to_d) if price
+  # @deprecated
+  def round_amount_and_price
+    self.price = market.round_price(price.to_d) if price
 
     if volume
-      self.volume = config.fix_number_precision(:ask, volume.to_d)
-      self.origin_volume = origin_volume.present? ? config.fix_number_precision(:ask, origin_volume.to_d) : volume
+      self.volume = market.round_amount(volume.to_d)
+      self.origin_volume = origin_volume.present? ? market.round_amount(origin_volume.to_d) : volume
     end
   end
 
@@ -185,11 +259,11 @@ class Order < ApplicationRecord
     end
   end
 
-  private
-
   def is_limit_order?
     ord_type == 'limit'
   end
+
+  private
 
   def market_order_validations
     errors.add(:price, 'must not be present') if price.present?
@@ -216,7 +290,7 @@ class Order < ApplicationRecord
 end
 
 # == Schema Information
-# Schema version: 20190213104708
+# Schema version: 20190813121822
 #
 # Table name: orders
 #
@@ -227,7 +301,8 @@ end
 #  price          :decimal(32, 16)
 #  volume         :decimal(32, 16)  not null
 #  origin_volume  :decimal(32, 16)  not null
-#  fee            :decimal(32, 16)  default(0.0), not null
+#  maker_fee      :decimal(17, 16)  default(0.0), not null
+#  taker_fee      :decimal(17, 16)  default(0.0), not null
 #  state          :integer          not null
 #  type           :string(8)        not null
 #  member_id      :integer          not null
