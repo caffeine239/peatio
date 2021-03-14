@@ -46,7 +46,7 @@ describe Bitcoin::Blockchain do
     end
 
     it 'returns latest block number' do
-      block_number = 1489174
+      block_number = 1
 
       stub_request(:post, endpoint)
         .with(body: { jsonrpc: '1.0',
@@ -73,7 +73,7 @@ describe Bitcoin::Blockchain do
       
     it 'keeps alive' do
       stub_request(:post, endpoint)
-          .to_return(body: { result: 1489174,
+          .to_return(body: { result: 1,
                              error:  nil,
                              id:     nil }.to_json)
           .with(headers: { 'Connection': 'keep-alive',
