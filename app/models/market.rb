@@ -22,11 +22,10 @@ class Market < ApplicationRecord
   # Since we use decimal with 16 digits fractional part for storing numbers in DB
   # sum of multipliers fractional parts must not be greater then 16.
   # In the worst situation we have 3 multipliers (price * amount * fee).
-  # For fee we define static precision - 4.
-  # So 12 left for amount and price precision.
+  # For fee we define static precision - 6. See TradingFee::FEE_PRECISION.
+  # So 10 left for amount and price precision.
   DB_DECIMAL_PRECISION = 16
-  FEE_PRECISION = 4
-  FUNDS_PRECISION = 12
+  FUNDS_PRECISION = 10
 
   STATES = %w[enabled disabled hidden locked sale presale].freeze
   # enabled - user can view and trade.
@@ -46,8 +45,11 @@ class Market < ApplicationRecord
   alias_attribute :base_currency, :base_unit
   alias_attribute :quote_currency, :quote_unit
 
-  alias_attribute :base_currency_fee, :bid_fee
-  alias_attribute :quote_currency_fee, :ask_fee
+  # == Extensions ===========================================================
+
+  # == Relationships ========================================================
+
+  has_many :trading_fees, dependent: :delete_all
 
   # == Validations ==========================================================
 
@@ -68,13 +70,9 @@ class Market < ApplicationRecord
 
   validates :base_currency, :quote_currency, presence: true
 
-  validates :quote_currency_fee,
-            :base_currency_fee,
-            presence: true,
-            numericality: { greater_than_or_equal_to: 0,
-                            less_than_or_equal_to: 0.5 }
+  validates :min_price, :max_price, precision: { less_than_or_eq_to: ->(m) { m.price_precision } }
 
-  validate  :validate_attr_precisions
+  validates :min_amount, precision: { less_than_or_eq_to: ->(m) { m.amount_precision } }
 
   validates :amount_precision,
             :price_precision,
@@ -83,16 +81,17 @@ class Market < ApplicationRecord
 
   validates :price_precision,
             numericality: {
-              less_than_or_equal_to: -> (_m) { FUNDS_PRECISION }
+              less_than_or_equal_to: ->(_m) { FUNDS_PRECISION }
             }
+
   validates :amount_precision,
             numericality: {
-              less_than_or_equal_to: -> (m) { FUNDS_PRECISION - m.price_precision }
+              less_than_or_equal_to: ->(m) { FUNDS_PRECISION - m.price_precision }
             }
 
   validates :base_currency, :quote_currency, inclusion: { in: -> (_) { Currency.codes } }
 
-  validate  :currencies_must_be_enabled, if: ->(m) { m.state.enabled? }
+  validate  :currencies_must_be_visible, if: ->(m) { m.state.enabled? }
 
   validates :min_price,
             presence: true,
@@ -176,32 +175,17 @@ class Market < ApplicationRecord
     0.1.to_d**price_precision
   end
 
-  def valid_precision?(d, max_precision)
-    d.round(max_precision) == d
-  end
-
 private
 
-  def validate_attr_precisions
-    { base_currency_fee: FEE_PRECISION, quote_currency_fee: FEE_PRECISION,
-      min_price: price_precision, max_price: price_precision,
-      min_amount: amount_precision }.each do |field, precision|
-      attr_value = public_send(field)
-      unless attr_value.round(precision) == attr_value
-        errors.add(field, "is too precise (max fractional part size is #{precision})")
-      end
-    end
-  end
-
-  def currencies_must_be_enabled
+  def currencies_must_be_visible
     %i[base_currency quote_currency].each do |unit|
-      errors.add(unit, 'is not enabled.') if Currency.lock.find_by_id(public_send(unit))&.disabled?
+      errors.add(unit, 'is not visible.') unless Currency.lock.find_by_id(public_send(unit))&.visible?
     end
   end
 end
 
 # == Schema Information
-# Schema version: 20190624102330
+# Schema version: 20190816125948
 #
 # Table name: markets
 #
@@ -210,8 +194,6 @@ end
 #  quote_unit       :string(10)       not null
 #  amount_precision :integer          default(4), not null
 #  price_precision  :integer          default(4), not null
-#  ask_fee          :decimal(17, 16)  default(0.0), not null
-#  bid_fee          :decimal(17, 16)  default(0.0), not null
 #  min_price        :decimal(32, 16)  default(0.0), not null
 #  max_price        :decimal(32, 16)  default(0.0), not null
 #  min_amount       :decimal(32, 16)  default(0.0), not null

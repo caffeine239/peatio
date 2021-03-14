@@ -17,11 +17,11 @@ module API
         params do
           optional :currency,
                    type: String,
-                   values: { value: -> { Currency.enabled.codes(bothcase: true) }, message: 'account.currency.doesnt_exist' },
+                   values: { value: -> { Currency.visible.codes(bothcase: true) }, message: 'account.currency.doesnt_exist' },
                    desc: 'Currency code'
           optional :state,
-                   type: String,
-                   values: { value: -> { Deposit::STATES.map(&:to_s) }, message: 'account.deposit.invalid_state' }
+                   values: { value: ->(v) { [*v].all? { |value| value.in? Deposit::STATES.map(&:to_s) } }, message: 'account.deposit.invalid_state' },
+                   desc: 'Filter deposits by state.'
           optional :limit,
                    type: { value: Integer, message: 'account.deposit.non_integer_limit' },
                    values: { value: 1..100, message: 'account.deposit.invalid_limit' },
@@ -63,7 +63,7 @@ module API
         params do
           requires :currency,
                    type: String,
-                   values: { value: -> { Currency.coins.enabled.codes(bothcase: true) }, message: 'account.currency.doesnt_exist'},
+                   values: { value: -> { Currency.coins.visible.codes(bothcase: true) }, message: 'account.currency.doesnt_exist'},
                    desc: 'The account you want to deposit to.'
           given :currency do
             optional :address_format,
@@ -74,7 +74,13 @@ module API
           end
         end
         get '/deposit_address/:currency' do
-          current_user.ac(params[:currency]).payment_address.yield_self do |pa|
+          currency = Currency.find(params[:currency])
+
+          unless currency.deposit_enabled?
+            error!({ errors: ['account.currency.deposit_disabled'] }, 422)
+          end
+
+          current_user.ac(currency).payment_address.yield_self do |pa|
             { currency: params[:currency], address: params[:address_format] ? pa.format_address(params[:address_format]) : pa.address }
           end
         end

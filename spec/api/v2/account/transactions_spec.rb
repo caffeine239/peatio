@@ -2,17 +2,17 @@
 # frozen_string_literal: true
 
 describe API::V2::Account::Transactions, type: :request do
-  let(:member) { create(:member, :level_3) }
-  let(:other_member) { create(:member, :level_3) }
-  let(:token) { jwt_for(member) }
-  let(:other_token) { jwt_for(other_member) }
-
   describe 'GET /api/v2/account/transactions' do
+    let(:member) { create(:member, :level_3) }
+    let(:token) { jwt_for(member) }
+    let(:btc_account) { member.accounts.with_currency('btc').first }
+    let(:usd_account) { member.accounts.with_currency('usd').first }
+    let(:balance) { 100000 }
 
     context 'successful' do
-      let(:member) { create(:member, :level_3) }
-      let(:token) { jwt_for(member) }
       before do
+        btc_account.plus_funds(balance)
+        usd_account.plus_funds(balance)
         create_list(:deposit_usd, 4, member: member, updated_at: 5.hour.ago)
         create_list(:usd_withdraw, 4, member: member, updated_at: 5.hour.ago)
         create_list(:deposit_btc, 3, member: member, updated_at: 10.hour.ago)
@@ -24,7 +24,6 @@ describe API::V2::Account::Transactions, type: :request do
       it 'returns all deposits and withdraws num' do
         api_get '/api/v2/account/transactions', token: token
         result = JSON.parse(response.body)
-
         expect(result.size).to eq 24
 
         expect(response.headers.fetch('Total')).to eq '24'
@@ -64,16 +63,16 @@ describe API::V2::Account::Transactions, type: :request do
         api_get '/api/v2/account/transactions', params: { limit: 8, page: 1 }, token: token
         result = JSON.parse(response.body)
 
-        expect(result.select { |t| t['type'] == 'Withdraw' }.count).to be 4
-        expect(result.select { |t| t['type'] == 'Deposit' }.count).to be 4
+        expect(result.select { |t| t['type'] == 'Withdraw' }.count).to eq 4
+        expect(result.select { |t| t['type'] == 'Deposit' }.count).to eq 4
       end
 
       it 'returns the oldest mixed up withdraws and deposits depending on updated_at' do
         api_get '/api/v2/account/transactions', params: { limit: 8, page: 2, time_from: 2.days.ago.to_i }, token: token
         result = JSON.parse(response.body)
 
-        expect(result.select { |t| t['type'] == 'Withdraw' }.count).to be 3
-        expect(result.select { |t| t['type'] == 'Deposit' }.count).to be 3
+        expect(result.select { |t| t['type'] == 'Withdraw' }.count).to eq 3
+        expect(result.select { |t| t['type'] == 'Deposit' }.count).to eq 3
       end
 
       it 'returns sorted transactions in descending order' do
@@ -92,29 +91,39 @@ describe API::V2::Account::Transactions, type: :request do
         expect(update_time).to eq(update_time.sort)
       end
 
-      it 'return only transactions with BTC currency' do
+      it 'returns only transactions with BTC currency' do
         api_get '/api/v2/account/transactions', params: { currency: 'btc' }, token: token
         result = JSON.parse(response.body)
 
-        expect(result.count).to be 6
+        expect(result.count).to eq 6
       end
 
-      it 'return only transactions with USD currency' do
+      it 'returns only transactions with USD currency' do
         api_get '/api/v2/account/transactions', params: { currency: 'USD' }, token: token
         result = JSON.parse(response.body)
 
-        expect(result.count).to be 18
+        expect(result.count).to eq 18
+      end
+
+      it 'returns nil in confirmations field for fiat' do
+        api_get '/api/v2/account/transactions', params: { currency: 'USD' }, token: token
+        result = JSON.parse(response.body)
+
+        expect(result.pluck('confimations').none?).to be_truthy
+      end
+
+      it 'returns valid number in confirmations field for coin' do
+        api_get '/api/v2/account/transactions', params: { currency: 'btc' }, token: token
+        result = JSON.parse(response.body)
+
+        expect(result.pluck('confimations').any? { |c| c.nil? ? true : c > 1 }).to be_truthy
       end
     end
 
     context 'fail' do
-      let(:member) { create(:member, :level_3) }
-      let(:token) { jwt_for(member) }
       before do
-        create_list(:deposit_usd, 4, member: member, updated_at: 5.hour.ago)
-        create_list(:usd_withdraw, 4, member: member, updated_at: 5.hour.ago)
-        create_list(:deposit_usd, 3, member: member, updated_at: 10.hour.ago)
-        create_list(:usd_withdraw, 3, member: member, updated_at: 10.hour.ago)
+        btc_account.plus_funds(balance)
+        usd_account.plus_funds(balance)
       end
 
       it 'requires authentication' do

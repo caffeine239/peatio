@@ -42,6 +42,10 @@ module API
         mount Management::Operations
         mount Management::Transfers
         mount Management::Trades
+        mount Management::Members
+        mount Management::TradingFees
+        mount Management::Currencies
+        mount Management::Markets
 
         # The documentation is accessible at http://localhost:3000/swagger?url=/api/v2/management/swagger
         # Add swagger documentation for Peatio Management API
@@ -52,9 +56,9 @@ module API
                                   info: {
                                     title:          "Peatio Management API #{API::V2::Mount::API_VERSION}",
                                     description:    'Management API is server-to-server API with high privileges.',
-                                    contact_name:   'peatio.tech',
-                                    contact_email:  'hello@peatio.tech',
-                                    contact_url:    'https://www.peatio.tech',
+                                    contact_name:   'openware.com',
+                                    contact_email:  'hello@openware.com',
+                                    contact_url:    'https://www.openware.com',
                                     licence:        'MIT',
                                     license_url:    'https://github.com/rubykube/peatio/blob/master/LICENSE.md'
                                   },
