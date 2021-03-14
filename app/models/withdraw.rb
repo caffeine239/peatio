@@ -19,6 +19,7 @@ class Withdraw < ApplicationRecord
   include AASM::Locking
   include BelongsToCurrency
   include BelongsToMember
+  include BelongsToAccount
   include TIDIdentifiable
   include FeeChargeable
 
@@ -28,6 +29,7 @@ class Withdraw < ApplicationRecord
 
   acts_as_eventable prefix: 'withdraw', on: %i[create update]
 
+  before_validation(on: :create) { self.account ||= member&.ac(currency) }
   before_validation(on: :create) { self.rid ||= beneficiary.rid if beneficiary.present? }
   before_validation { self.completed_at ||= Time.current if completed? }
 
@@ -39,7 +41,7 @@ class Withdraw < ApplicationRecord
             numericality: { greater_than_or_equal_to: ->(withdraw) { withdraw.currency.min_withdraw_amount }}
 
   validate do
-    errors.add(:beneficiary, 'not active') if beneficiary.present? && !beneficiary.active? && !aasm_state.to_sym.in?(COMPLETED_STATES)
+    errors.add(:beneficiary, 'not active') if beneficiary.present? && !beneficiary.active?
   end
 
   scope :completed, -> { where(aasm_state: COMPLETED_STATES) }
@@ -137,10 +139,6 @@ class Withdraw < ApplicationRecord
     event :err do
       transitions from: :processing, to: :errored, on_transition: :add_error
     end
-  end
-
-  def account
-    member&.get_account(currency)
   end
 
   def add_error(e)
@@ -283,11 +281,12 @@ private
 end
 
 # == Schema Information
-# Schema version: 20200211124707
+# Schema version: 20190904143050
 #
 # Table name: withdraws
 #
 #  id             :integer          not null, primary key
+#  account_id     :integer          not null
 #  member_id      :integer          not null
 #  beneficiary_id :bigint
 #  currency_id    :string(10)       not null
@@ -309,6 +308,7 @@ end
 # Indexes
 #
 #  index_withdraws_on_aasm_state            (aasm_state)
+#  index_withdraws_on_account_id            (account_id)
 #  index_withdraws_on_currency_id           (currency_id)
 #  index_withdraws_on_currency_id_and_txid  (currency_id,txid) UNIQUE
 #  index_withdraws_on_member_id             (member_id)

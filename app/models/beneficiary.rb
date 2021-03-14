@@ -18,9 +18,9 @@ class Beneficiary < ApplicationRecord
   PIN_LENGTH  = 6
   PIN_RANGE   = 10**5..10**Beneficiary::PIN_LENGTH
 
-  INVALID_ADDRESS_SYMBOLS = /[\?\<\>\'\,\?\[\]\}\{\=\"\)\(\*\&\^\%\$\#\`\~\{\}\@]/.freeze
-
   # == Attributes ===========================================================
+
+  attr_readonly :pin
 
   # == Extensions ===========================================================
 
@@ -58,11 +58,6 @@ class Beneficiary < ApplicationRecord
     errors.add(:data, 'address can\'t be blank') if data.blank? || data['address'].blank?
   end
 
-    # Validates address field which is required for coin.
-    validate if: ->(b) { b.currency.present? && b.currency.coin? } do
-      errors.add(:data, 'invlalid address') if data.present? && data['address'].present? && data['address'].match?(INVALID_ADDRESS_SYMBOLS)
-    end
-
   # Validates that data contains full_name field which is required for fiat.
   validate if: ->(b) { b.currency.present? && b.currency.fiat? } do
     errors.add(:data, 'full_name can\'t be blank') if data.blank? || data['full_name'].blank?
@@ -75,13 +70,7 @@ class Beneficiary < ApplicationRecord
   # == Callbacks ============================================================
 
   before_validation(on: :create) do
-    # Truncate spaces
-    data['address'] = data['address'].gsub(/\s+/, '') if data.present? && data['address'].present?
-
-    # Generate Beneficiary Pin
     self.pin ||= self.class.generate_pin
-    # Record time when we send event to Event API
-    self.sent_at = Time.now
   end
 
   # == Class Methods ========================================================
@@ -107,7 +96,6 @@ class Beneficiary < ApplicationRecord
       data:        data,
       pin:         pin,
       state:       state,
-      sent_at:     sent_at.iso8601,
       created_at:  created_at.iso8601,
       updated_at:  updated_at.iso8601 }
   end
@@ -127,10 +115,6 @@ class Beneficiary < ApplicationRecord
     currency.coin? ? coin_rid : fiat_rid
   end
 
-  def regenerate_pin!
-    update(pin: self.class.generate_pin, sent_at: Time.now)
-  end
-
   private
 
   def coin_rid
@@ -145,7 +129,7 @@ class Beneficiary < ApplicationRecord
 end
 
 # == Schema Information
-# Schema version: 20200527130534
+# Schema version: 20190829152927
 #
 # Table name: beneficiaries
 #
@@ -156,7 +140,6 @@ end
 #  description :string(255)      default("")
 #  data        :json
 #  pin         :integer          unsigned, not null
-#  sent_at     :datetime
 #  state       :integer          default("pending"), unsigned, not null
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null

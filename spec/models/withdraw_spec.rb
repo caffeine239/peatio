@@ -78,10 +78,28 @@ describe Withdraw do
     end
 
     describe 'balance validations' do
-      subject { build :btc_withdraw }
+      subject { build :btc_withdraw, account_id: 999 }
 
       it 'validates balance' do
-        expect { subject.save }.to raise_error(::Account::AccountError)
+        expect do
+          subject.save.to raise_error(Account::AccountError)
+        end
+      end
+    end
+
+    describe 'account id from outside' do
+
+      let(:currency) { Currency.find('btc') }
+      let(:member) { create(:member) }
+      before do
+        member.accounts.with_currency(currency).first.plus_funds(12)
+      end
+      subject { build :btc_withdraw, account_id: 999, member: member }
+
+      it 'don\'t accept account id from outside' do
+        expect do
+          expect(subject.account_id).to eq(subject.member.get_account(subject.currency).id)
+        end
       end
     end
   end
@@ -428,52 +446,6 @@ describe Withdraw do
         expect(subject.confirming?).to be true
       end
     end
-
-    context :fail do
-      subject { create(:btc_withdraw, :with_deposit_liability) }
-
-      before { subject.submit! }
-      before { subject.accept! }
-
-      context 'from errored' do
-        before do
-          subject.update!(aasm_state: :processing)
-          subject.err!(Peatio::Wallet::ClientError.new('Something wrong with request'))
-        end
-
-        it do
-          subject.fail!
-          expect(subject.failed?).to be true
-        end
-      end
-
-      context 'with archived beneficiary' do
-        let(:member) { create(:member) }
-        let(:address) { Faker::Blockchain::Ethereum.address }
-        let(:coin) { Currency.find(:btc) }
-
-        subject { create(:btc_withdraw, :with_deposit_liability, member: member, rid: address, beneficiary: beneficiary) }
-
-        before { subject.submit! }
-        before { subject.accept! }
-
-        let!(:beneficiary) { create(:beneficiary,
-                                    member: member,
-                                    currency: coin,
-                                    state: :active,
-                                    data: generate(:coin_beneficiary_data).merge(address: address)) }
-
-        before do
-          subject.update!(aasm_state: :processing)
-          subject.err!(Peatio::Wallet::ClientError.new('Something wrong with request'))
-          beneficiary.update!(state: :archived)
-        end
-        it do
-          subject.fail!
-          expect(subject.failed?).to be true
-        end
-      end
-    end
   end
 
   context '#quick?' do
@@ -609,7 +581,8 @@ describe Withdraw do
         currency: Currency.find(:bch),
         member:   member,
         rid:      address,
-        sum:      1.0.to_d
+        sum:      1.0.to_d,
+        account:  account
     end
 
     context 'valid CashAddr address' do
@@ -657,7 +630,7 @@ describe Withdraw do
 
   context 'validate note length' do
     let(:member)    { create(:member) }
-    let!(:account)   { member.get_account(:btc).tap { |x| x.update!(balance: 1.0.to_d) } }
+    let(:account)   { member.ac(:btc).tap { |x| x.update!(balance: 1.0.to_d) } }
     let(:address)   { 'bitcoincash:qqkv9wr69ry2p9l53lxp635va4h86wv435995w8p2h' }
 
     let :record do
@@ -666,6 +639,7 @@ describe Withdraw do
         member:   member,
         rid:      address,
         sum:      1.0.to_d,
+        account:  account,
         note:     note
     end
 

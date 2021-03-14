@@ -148,26 +148,6 @@ describe API::V2::Management::Withdraws, type: :request do
             expect(response).to include_api_error('management.beneficiary.invalid_state_for_withdrawal')
           end
         end
-
-        context 'withdrawal with note' do
-          let(:member) { create(:member, :barong) }
-          let(:currency) { Currency.find(:btc) }
-          let(:amount) { 0.1575 }
-          let(:signers) { %i[alex jeff] }
-          let :data do
-            { uid:      member.uid,
-              currency: currency.code,
-              amount:   amount,
-              rid:      Faker::Blockchain::Bitcoin.address,
-              note:     'Withdraw money'
-            }
-          end
-
-          it 'returns new withdraw with correct note' do
-            request
-            expect(JSON.parse(response.body)['note']).to eq 'Withdraw money'
-          end
-        end
       end
 
       context 'action: :process' do
@@ -263,7 +243,7 @@ describe API::V2::Management::Withdraws, type: :request do
     let(:signers) { %i[alex jeff] }
     let(:data) { { tid: record.tid } }
     let(:account) { member.accounts.with_currency(currency).first }
-    let(:record) { "Withdraws::#{currency.type.camelize}".constantize.create!(member: member, sum: amount, rid: Faker::Bank.iban, currency: currency) }
+    let(:record) { "Withdraws::#{currency.type.camelize}".constantize.create!(member: member, account: account, sum: amount, rid: Faker::Bank.iban, currency: currency) }
     let(:balance) { 800.77 }
     before { account.plus_funds(balance) }
 

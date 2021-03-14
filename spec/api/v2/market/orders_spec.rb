@@ -57,6 +57,7 @@ describe API::V2::Market::Orders, type: :request do
       result = JSON.parse(response.body)
 
       expect(response).to be_successful
+      expect(response.headers.fetch('Total')).to eq '5'
       expect(result.size).to eq 5
     end
 
@@ -65,6 +66,7 @@ describe API::V2::Market::Orders, type: :request do
       result = JSON.parse(response.body)
 
       expect(response).to be_successful
+      expect(response.headers.fetch('Total')).to eq '4'
       expect(result.size).to eq 4
     end
 
@@ -73,17 +75,9 @@ describe API::V2::Market::Orders, type: :request do
       result = JSON.parse(response.body)
 
       expect(response).to be_successful
+      expect(response.headers.fetch('Total')).to eq '1'
       expect(result.size).to eq 1
       expect(result.first['state']).to eq Order::DONE
-    end
-
-    it 'returns orders with state done and wait' do
-      api_get '/api/v2/market/orders', params: { market: 'btcusd', state: [Order::DONE, Order::WAIT] }, token: token
-      result = JSON.parse(response.body)
-
-      expect(response).to be_successful
-      count = member.orders.where(state: [Order::DONE, Order::WAIT], market_id: 'btcusd').count
-      expect(result.size).to eq count
     end
 
     it 'returns paginated orders' do
@@ -91,12 +85,14 @@ describe API::V2::Market::Orders, type: :request do
       result = JSON.parse(response.body)
 
       expect(response).to be_successful
+      expect(response.headers.fetch('Total')).to eq '4'
       expect(result.first['price']).to eq '13.0'
 
       api_get '/api/v2/market/orders', params: { market: 'btcusd', limit: 1, page: 2 }, token: token
       result = JSON.parse(response.body)
 
       expect(response).to be_successful
+      expect(response.headers.fetch('Total')).to eq '4'
       expect(result.first['price']).to eq '11.0'
     end
 

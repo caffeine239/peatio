@@ -93,17 +93,6 @@ module API
               error!({ errors: ['account.beneficiary.missing_full_name_in_data'] }, 422)
             end
 
-            # Since data is stored in MySQL JSON format we iterate through all
-            # beneficiaries one by one to detect duplicated address.
-            if currency.coin? &&
-              current_user
-                .beneficiaries
-                .available_to_member
-                .where(currency: currency)
-                .any? { |b| b.data['address'] == declared_params.dig(:data, :address) }
-              error!({ errors: ['account.beneficiary.duplicate_address'] }, 422)
-            end
-
             present current_user
                       .beneficiaries
                       .create!(declared_params),
@@ -112,31 +101,6 @@ module API
             report_exception(e)
             error!({ errors: ['account.beneficiary.failed_to_create'] }, 422)
           end
-
-          desc 'Resend beneficiary pin'
-          params do
-            requires :id,
-                     type: { value: Integer, message: 'account.beneficiary.non_integer_id' },
-                     desc: 'Beneficiary Identifier in Database'
-          end
-          patch ':id/resend_pin' do
-            beneficiary = current_user
-                              .beneficiaries
-                              .available_to_member
-                              .find_by!(id: params[:id])
-
-            unless beneficiary.pending?
-              error!({ errors: ['account.beneficiary.cant_resend'] }, 422)
-            end
-
-            if Time.now - beneficiary.sent_at < 60
-              error!({ errors: ['account.beneficiary.cant_resend_within_1_minute'], sent_at: beneficiary.sent_at.iso8601 }, 422)
-            end
-
-            beneficiary.regenerate_pin!
-            status 204
-          end
-
 
           desc 'Activates beneficiary with pin',
                success: API::V2::Entities::Beneficiary

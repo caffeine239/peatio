@@ -85,9 +85,7 @@ module API
               type: JSON,
               desc: 'Wallet settings.'
             }
-          ) do |wallet, _options|
-            wallet.settings.except('secret')
-          end
+          )
 
           expose(
             :created_at,

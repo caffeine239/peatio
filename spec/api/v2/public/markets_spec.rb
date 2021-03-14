@@ -20,19 +20,6 @@ describe API::V2::Public::Markets, type: :request do
         expect(market.keys).to eq expected_keys
       end
     end
-
-    context 'pagination' do
-      it 'returns paginated currencies' do
-        get '/api/v2/public/markets', params: { limit: 2 }
-
-        result = JSON.parse(response.body)
-
-        expect(response).to be_successful
-
-        expect(response.headers.fetch('Total').to_i).to eq Market.enabled.size
-        expect(result.size).to eq(2)
-      end
-    end
   end
 
   describe 'GET /api/v2/public/markets/:market/order_book' do
@@ -96,7 +83,7 @@ describe API::V2::Public::Markets, type: :request do
         expect(response).to be_successful
 
         result = JSON.parse(response.body)
-        expect(result['asks']).to eq asks
+        expect(result['asks']).to eq asks.reverse
         expect(result['bids']).to eq bids
       end
     end

@@ -20,6 +20,7 @@ gem 'bunny', '~> 2.14.1'
 gem 'cancancan', '~> 2.3.0'
 gem 'enumerize', '~> 2.2.2'
 gem 'kaminari', '~> 1.1.1'
+gem 'api-pagination', '~> 4.8.2'
 gem 'sassc-rails', '~> 2.1.2'
 gem 'coffee-rails', '~> 4.2.2'
 gem 'uglifier', '~> 4.1.20'
@@ -52,7 +53,7 @@ gem 'jwt-multisig', '~> 1.0.0'
 gem 'cash-addr', '~> 0.2.0', require: 'cash_addr'
 gem 'digest-sha3', '~> 1.1.0'
 gem 'scout_apm', '~> 2.4', require: false
-gem 'peatio', '~> 0.6.3'
+gem 'peatio', '~> 0.6.1'
 gem 'rack-cors', '~> 1.0.2', require: false
 gem 'env-tweaks', '~> 1.0.0'
 gem 'vault', '~> 0.12', require: false

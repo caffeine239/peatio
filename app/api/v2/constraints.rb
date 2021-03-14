@@ -6,13 +6,12 @@ module API
     module Constraints
       class << self
         def included(base)
-          rate_limit = ENV.fetch("PEATIO_RATE_LIMIT_5MIN", 6000).to_i
-          apply_rules!(rate_limit)
+          apply_rules!
           base.use Rack::Attack
         end
 
-        def apply_rules!(rate_limit)
-          Rack::Attack.throttle 'Limit number of calls to API', limit: rate_limit, period: 5.minutes do |req|
+        def apply_rules!
+          Rack::Attack.throttle 'Limit number of calls to API', limit: 6000, period: 5.minutes do |req|
             req.env['api_v2.authentic_member_email']
           end
         end

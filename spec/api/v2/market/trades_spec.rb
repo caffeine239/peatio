@@ -72,7 +72,7 @@ describe API::V2::Market::Trades, type: :request do
 
       result = JSON.parse(response.body)
 
-      expect(result.size).to eq 4
+      expect(response.headers.fetch('Total')).to eq '4'
 
       expect(result.find { |t| t['id'] == btcusd_ask_trade.id }['side']).to eq 'sell'
       expect(result.find { |t| t['id'] == btcusd_ask_trade.id }['order_id']).to eq btcusd_ask.id
@@ -90,7 +90,7 @@ describe API::V2::Market::Trades, type: :request do
 
       result = JSON.parse(response.body)
 
-      expect(result.size).to eq 2
+      expect(response.headers.fetch('Total')).to eq '2'
       expect(result.find { |t| t['id'] == btcusd_ask_trade.id }['side']).to eq 'sell'
       expect(result.find { |t| t['id'] == btcusd_ask_trade.id }['order_id']).to eq btcusd_ask.id
       expect(result.find { |t| t['id'] == btcusd_bid_trade.id }['side']).to eq 'buy'
@@ -103,6 +103,7 @@ describe API::V2::Market::Trades, type: :request do
 
       expect(response).to be_successful
       expect(result.size).to eq 1
+      expect(response.headers.fetch('Total')).to eq '2'
     end
 
     it 'returns trades for last 24h' do
@@ -112,6 +113,7 @@ describe API::V2::Market::Trades, type: :request do
 
       expect(response).to be_successful
       expect(result.size).to eq 3
+      expect(response.headers.fetch('Total')).to eq '3'
     end
 
     it 'returns trades older than 1 day' do
@@ -120,6 +122,7 @@ describe API::V2::Market::Trades, type: :request do
 
       expect(response).to be_successful
       expect(result.size).to eq 2
+      expect(response.headers.fetch('Total')).to eq '2'
     end
 
     it 'returns trades for specific hour' do
@@ -129,6 +132,7 @@ describe API::V2::Market::Trades, type: :request do
 
       expect(response).to be_successful
       expect(result.size).to eq 1
+      expect(response.headers.fetch('Total')).to eq '1'
     end
 
     it 'returns limit out of range error' do

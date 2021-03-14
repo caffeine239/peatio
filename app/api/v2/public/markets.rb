@@ -6,7 +6,6 @@ module API
     module Public
       class Markets < Grape::API
         helpers ::API::V2::OrderHelpers
-        helpers ::API::V2::ParamHelpers
 
         class OrderBook < Struct.new(:asks, :bids); end
 
@@ -14,11 +13,8 @@ module API
           desc 'Get all available markets.',
             is_array: true,
             success: API::V2::Entities::Market
-          params do
-            use :pagination
-          end
           get "/" do
-            present paginate(::Market.enabled.ordered), with: API::V2::Entities::Market
+            present ::Market.enabled.ordered, with: API::V2::Entities::Market
           end
 
           desc 'Get the order book of specified market.',
@@ -95,7 +91,7 @@ module API
           end
           get ":market/depth" do
             global = Global[params[:market]]
-            asks = global.asks[0,params[:limit]]
+            asks = global.asks[0,params[:limit]].reverse
             bids = global.bids[0,params[:limit]]
             { timestamp: Time.now.to_i, asks: asks, bids: bids }
           end
