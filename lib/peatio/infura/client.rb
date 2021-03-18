@@ -1,5 +1,5 @@
 module Infura
-  class Client
+   class Client
     Error = Class.new(StandardError)
 
     class ConnectionError < Error; end
@@ -20,7 +20,7 @@ module Infura
 
     def json_rpc(method, params = [])
       response = connection.post \
-          '/',
+      '',
           {jsonrpc: '2.0', id: rpc_call_id, method: method, params: params}.to_json,
           {'Accept' => 'application/json',
            'Content-Type' => 'application/json'}
@@ -43,7 +43,7 @@ module Infura
     def connection
       @connection ||= Faraday.new(@json_rpc_endpoint) do |f|
         f.adapter :net_http_persistent, pool_size: 5, idle_timeout: @idle_timeout
-      end.tap do |connection|      
+      end.tap do |connection|
         unless @json_rpc_endpoint.user.blank?
           connection.basic_auth(@json_rpc_endpoint.user, @json_rpc_endpoint.password)
         end
@@ -51,3 +51,4 @@ module Infura
     end
   end
 end
+
