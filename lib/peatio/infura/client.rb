@@ -13,7 +13,7 @@ module Infura
     extend Memoist
 
     def initialize(endpoint, idle_timeout: 5)
-      @json_rpc_endpoint = URI.parse(endpoint)
+      @json_rpc_endpoint = endpoint
       @json_rpc_call_id = 0
       @idle_timeout = idle_timeout
     end
@@ -22,8 +22,6 @@ module Infura
       response = connection.post \
           '/',
           {jsonrpc: '2.0', id: rpc_call_id, method: method, params: params}.to_json,
-          '/',
-          @json_rpc_endpoint,
           {'Accept' => 'application/json',
            'Content-Type' => 'application/json'}
       response.assert_success!
