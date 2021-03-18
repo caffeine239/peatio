@@ -18,7 +18,7 @@ module Muskcoin
     def fetch_block!(block_number)
       block_hash = client.json_rpc(:getblockhash, [block_number])
 
-      client.json_rpc(:getblock, [block_hash, 2])
+      client.json_rpc(:getblock, [block_hash])
         .fetch('tx').each_with_object([]) do |tx, txs_array|
           txs = build_transaction(tx).map do |ntx|
             Peatio::Transaction.new(ntx.merge(block_number: block_number))
@@ -51,7 +51,8 @@ module Muskcoin
 
     private
 
-    def build_transaction(tx_hash)
+    def build_transaction(tx_hash_New)
+    tx_hash = client.json_rpc(:getrawtransaction, [tx_hash_New, 1])
       tx_hash.fetch('vout')
         .select do |entry|
           entry.fetch('value').to_d > 0 &&
